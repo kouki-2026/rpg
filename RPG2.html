@@ -1,0 +1,5445 @@
+updatePlayer(){
+return WorldSystem.updatePlayer(this);
+}
+"最新完成版0.5.5"
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Loot RPG Test Range Boss Strong Complete</title>
+<style>
+:root{--panel:rgba(12,16,22,.82);--line:rgba(255,255,255,.18);--text:#f7f4e8;--gold:#ffd166;}
+*{box-sizing:border-box}
+.menu,.menu *{touch-action:pan-y}
+html,body{width:100%;height:100%}
+body{margin:0;background:#07090d;color:var(--text);font-family:Arial,sans-serif;overflow:hidden}
+#stage{position:relative;width:100vw;height:100dvh;background:#07090d;display:flex;justify-content:center;align-items:flex-start}
+#game{width:min(100vw,380px);height:300px;background:#18231c;image-rendering:pixelated;display:block}
+.hud{display:none}
+.log{
+position:absolute;
+left:50%;
+top:310px;
+transform:translateX(-50%);
+width:min(95vw,760px);
+max-height:120px;
+overflow:hidden;
+padding:8px 10px;
+border:1px solid var(--line);
+border-radius:8px;
+background:var(--panel);
+font-size:12px;
+line-height:1.45;
+}
+.menu{position:absolute;left:12px;right:12px;top:50px;bottom:10px;max-width:720px;margin:auto;padding:14px;border:1px solid var(--line);border-radius:8px;background:rgba(8,10,14,.97);display:none;overflow:hidden;-webkit-overflow-scrolling:touch;z-index:30}
+.menu.open{display:flex;flex-direction:column}
+.menuTop{position:sticky;top:0;z-index:5;background:rgba(8,10,14,.98);padding-bottom:10px;border-bottom:1px solid var(--line)}
+.menuHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.menuHead h1{margin:0;font-size:20px}
+.menuHeadBtns{display:flex;gap:8px}
+.menuClose{height:34px;padding:0 14px;font-size:13px}
+.menuBtns{display:flex;gap:8px}
+.menuBtns button{height:34px;padding:0 14px;font-size:13px}
+.playerStatus{
+margin-top:8px;
+padding:7px 9px;
+border:1px solid var(--line);
+border-radius:8px;
+background:rgba(255,255,255,.045);
+font-size:11px;
+line-height:1.45;
+color:#f7f4e8;
+}
+.playerStatus strong{
+color:var(--gold);
+}
+.menu-grid{
+display:grid;
+grid-template-columns:120px 1fr;
+gap:8px;
+margin-top:12px;
+flex:1;
+height:auto;
+min-height:0;
+overflow:hidden;
+}
+
+.menu-grid .box{
+min-height:0;
+overflow:hidden;
+}
+
+.menu-grid .box:nth-child(1){
+overflow-y:auto;
+-webkit-overflow-scrolling:touch;
+}
+
+.menu-grid .box:nth-child(2){
+overflow-y:auto;
+-webkit-overflow-scrolling:touch;
+}
+.box{border:1px solid var(--line);border-radius:8px;padding:10px;background:rgba(255,255,255,.04)}
+.box h2{margin:0 0 8px;font-size:13px;color:var(--gold)}
+.item-list{display:grid;gap:8px;max-height:none;overflow:visible}
+.invGroup{display:grid;gap:5px;padding:6px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.025)}
+.invGroupTitle{font-size:12px;color:var(--gold);padding:2px 0}
+.item-row{padding:7px;border-radius:6px;background:rgba(255,255,255,.06);font-size:12px;min-height:39px}
+.item-row.empty{opacity:.45;border:1px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.025)}
+.item-row.clickable{cursor:pointer}
+.item-row.equipped{outline:1px solid var(--gold);background:rgba(255,209,102,.12)}
+.item-row strong{display:block;font-size:13px;color:#fff}
+.itemLockBtn{
+position:absolute;
+right:6px;
+top:6px;
+width:42px;
+height:22px;
+padding:0;
+font-size:11px;
+font-weight:bold;
+background:#222;
+color:#fff;
+border:1px solid rgba(255,255,255,.25);
+border-radius:4px;
+}
+
+.itemLockBtn.locked{
+background:#ffd166;
+color:#111;
+border:1px solid #fff;
+}
+
+.durCircle{
+position:absolute;
+right:12px;
+top:34px;
+width:26px;
+height:26px;
+border-radius:50%;
+border:1px solid rgba(255,255,255,.28);
+}
+
+.durInner{
+position:absolute;
+left:5px;
+top:5px;
+width:14px;
+height:14px;
+border-radius:50%;
+background:#111;
+}
+.affixes{margin-top:4px;color:#bfe2ff}
+.drop-toast{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);min-width:min(82vw,420px);padding:14px 18px;border:1px solid var(--line);border-radius:8px;background:rgba(5,7,10,.88);text-align:center;opacity:0;pointer-events:none}
+.drop-toast.show{opacity:1}
+.confirmPanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(88vw,360px);padding:16px;border:1px solid var(--line);border-radius:10px;background:rgba(5,7,10,.96);display:none;z-index:60;text-align:center}
+.confirmPanel.open{display:block}
+.confirmPanel p{margin:0 0 14px;font-weight:700}
+.confirmBtns{display:flex;gap:10px;justify-content:center}
+.confirmBtns button{height:36px;padding:0 20px}
+.testBtns{display:grid;gap:10px}
+.testBtns button{height:38px}
+.controls{position:absolute;left:0;right:0;top:390px;height:180px;pointer-events:none}
+#pad{position:absolute;left:24px;top:420px;width:120px;height:120px;background:rgba(37,43,50,.9);border:3px solid #76808c;border-radius:50%;pointer-events:auto;touch-action:none}
+#stick{width:50px;height:50px;background:#d9e0e8;border-radius:50%;position:absolute;left:32px;top:32px}
+#quickHerbBtn{position:absolute;left:158px;bottom:62px;width:68px;height:38px;font-size:12px;pointer-events:auto;display:none}
+.small-buttons{
+position:absolute;
+left:10px;
+top:130px;
+display:grid;
+grid-template-columns:48px 68px;
+gap:8px;
+pointer-events:auto
+}
+button{border:1px solid rgba(255,255,255,.18);border-radius:8px;color:#fff;background:#343a42;font-weight:700;touch-action:manipulation}
+#pauseBtn{width:48px;height:42px;font-size:17px}
+#menuBtn{width:68px;height:42px;font-size:13px}
+@media(max-width:520px){
+#game{width:min(100vw,380px);height:300px}
+.log{
+display:block;
+top:304px;
+height:76px;
+max-height:76px;
+font-size:10px;
+line-height:1.35;
+padding:6px 8px;
+}
+.menu-grid{
+grid-template-columns:112px 1fr;
+gap:7px;
+height:calc(100% - 92px);
+}
+.menu{
+left:6px;
+right:6px;
+padding:8px;
+}
+.box{
+padding:7px;
+}
+.item-row{
+font-size:10px;
+padding:5px;
+min-height:32px;
+}
+.item-row strong{
+font-size:11px;
+}
+.invGroupTitle{
+font-size:10px;
+}
+.affixes{
+font-size:10px;
+}
+#pad{left:10px;top:0;width:120px;height:120px}
+.small-buttons{
+left:10px;
+top:130px;
+bottom:auto;
+}
+.controls{bottom:42px}
+}
+#bootScreen{
+position:absolute;
+inset:0;
+z-index:100;
+background:#000;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+#bootBtn{
+width:140px;
+height:56px;
+font-size:20px;
+border:1px solid rgba(255,255,255,.35);
+background:#1d2430;
+}
+
+#titleScreen{
+position:absolute;
+inset:0;
+z-index:90;
+background:linear-gradient(#081018,#101820);
+display:none;
+align-items:center;
+justify-content:center;
+text-align:center;
+}
+
+.titleBox{
+width:min(86vw,360px);
+padding:24px 18px;
+border:1px solid rgba(255,255,255,.22);
+border-radius:12px;
+background:rgba(5,7,10,.76);
+}
+
+.titleBox h1{
+margin:0 0 6px;
+font-size:34px;
+letter-spacing:2px;
+color:var(--gold);
+}
+
+.titleBox p{
+margin:0 0 20px;
+font-size:12px;
+opacity:.8;
+}
+
+.titleBox button{
+width:100%;
+height:46px;
+margin-top:10px;
+font-size:17px;
+}
+</style>
+</head>
+<body>
+<div id="stage">
+<canvas id="game" width="760" height="600"></canvas>
+<div class="hud" id="hud"></div>
+<div class="log" id="log"></div>
+<div class="drop-toast" id="dropToast"></div>
+<div class="confirmPanel" id="confirmPanel">
+<p>本当に最初から始めますか？</p>
+<div class="confirmBtns">
+<button id="restartYesBtn">YES</button>
+<button id="restartNoBtn">NO</button>
+</div>
+</div>
+<div class="confirmPanel" id="testPanel">
+<p>TEST MENU</p>
+<div class="testBtns">
+<button id="rangeViewBtn">攻撃範囲表示 OFF</button>
+<button id="guideVillageBtn">村案内 OFF</button>
+<button id="guideCampBtn">キャンプ案内 OFF</button>
+<button id="testCloseBtn">閉じる</button>
+</div>
+</div>
+<div id="bootScreen">
+<button id="bootBtn">起動</button>
+</div>
+
+<div id="titleScreen">
+<div class="titleBox">
+<h1>Loot RPG</h1>
+<p>Test Range Boss Strong</p>
+<button id="titleStartBtn">START</button>
+<button id="titleLoadBtn">LOAD</button>
+</div>
+</div>
+
+<div class="menu" id="menuPanel">
+<div class="menuTop">
+<div class="menuHead">
+<h1>MENU</h1>
+<div class="menuHeadBtns">
+<button class="menuClose" id="testBtn">テスト</button>
+<button class="menuClose" id="closeMenuBtn">閉じる</button>
+</div>
+</div>
+<div class="menuBtns">
+<button id="saveBtn">SAVE</button>
+<button id="loadBtn">LOAD</button>
+<button id="useHerbBtn">薬草使用</button>
+<button id="restartBtn">最初から</button>
+</div>
+<div class="playerStatus" id="playerStatus"></div>
+</div>
+<div class="menu-grid">
+<div class="box"><h2>装備中</h2><div id="equipped"></div></div>
+<div class="box"><h2>インベントリ</h2><div class="item-list" id="inventory"></div></div>
+</div>
+</div>
+<div class="controls">
+<div id="pad"><div id="stick"></div></div>
+<button id="quickHerbBtn">薬草</button>
+<div class="small-buttons">
+<button id="pauseBtn">II</button>
+<button id="menuBtn">MENU</button>
+</div>
+</div>
+</div>
+<script>
+const SAVE_KEY="kouki_loot_rpg_test_range_boss_strong_v01";
+const CONFIG={
+viewW:760,viewH:600,worldW:12000,worldH:8400,
+playerSpeed:1.5,enemySpeed:.24,fireballSpeed:5.5,
+swordDamage:10,fireDamage:3,pickupRange:34,baseHp:100,
+maxEnemies:130,targetNearEnemies:34,autoSpawnBatch:7,baseInventoryLimit:3,
+activeEnemyRange:1900,spawnMargin:120,
+visualTreeCount:520,treeMinDistance:78,
+enemySwordRange:42,enemySwordCharge:18,enemySwordActive:10,enemySwordCooldown:80
+};
+const PLAYER_ATTACK_SETTING={
+  range:55,
+  width:16,
+
+  bladeLen:65,
+  bladeWidth:8,
+  swingAngle:80,
+  offsetForward:8,
+  offsetSide:0,
+  swingSpeed:8,
+
+  duration:14,
+  interval:24,
+  knock:15,
+  damage:10
+};
+const EquipmentData={
+slots:[
+{key:"weapon",label:"武器"},
+{key:"armor",label:"体"},
+{key:"magic",label:"魔法書"},
+
+{key:"head",label:"頭"},
+{key:"arm",label:"腕"},
+{key:"waist",label:"腰"},
+{key:"leg",label:"足"},
+{key:"ring",label:"指輪"},
+{key:"ringL",label:"指輪L"},
+{key:"ringR",label:"指輪R"},
+{key:"bracelet",label:"腕輪"},
+{key:"braceletL",label:"腕輪L"},
+{key:"braceletR",label:"腕輪R"},
+{key:"neck",label:"首"}
+],
+
+currentSlots:[
+"weapon",
+"armor",
+"magic",
+
+"head",
+"arm",
+"waist",
+"leg",
+
+"ringL",
+"ringR",
+
+"braceletL",
+"braceletR",
+
+"neck"
+],
+
+futureSlots:[
+"head",
+"arm",
+"waist",
+"leg",
+"ringL",
+"ringR",
+"braceletL",
+"braceletR",
+"neck"
+],
+
+label(key){
+const slot=this.slots.find(s=>s.key===key);
+return slot?slot.label:key;
+}
+};
+
+const AUTO_EQUIP_SLOTS=[
+"head",
+"arm",
+"waist",
+"leg"
+];
+
+const ItemData={
+RARITIES:[
+{name:"Common",color:"#d5d8dc",bonus:1},
+{name:"Rare",color:"#6ec6ff",bonus:1.25},
+{name:"Epic",color:"#c08cff",bonus:1.55},
+{name:"Legendary",color:"#ffd166",bonus:2}
+],
+WEAPON_TYPES:[
+{key:"dagger",label:"Dagger",range:28,arc:2.4,duration:7,width:3,color:"#bfe2ff",damage:-2,knock:1.0},
+{key:"sword",label:"Sword",range:42,arc:2.1,duration:12,width:4,color:"#fff",damage:0,knock:2.0},
+{key:"greatsword",label:"Great Sword",range:58,arc:2.7,duration:22,width:7,color:"#ffe3a3",damage:8,knock:5.0},
+{key:"spear",label:"Spear",range:72,arc:.45,duration:16,width:3,color:"#d6f1ff",damage:2,knock:3.2},
+
+],
+ARMOR_TYPES:[
+{key:"leather",label:"Leather",body:"#486a8a",trim:"#2a3c4d"},
+{key:"cloak",label:"Cloak",body:"#5a4a8d",trim:"#d6c7ff"},
+{key:"knight",label:"Knight",body:"#9aa6b2",trim:"#f4f7fb"},
+{key:"spirit",label:"Spirit",body:"#2f8f6b",trim:"#b8ffd9"},
+{key:"dragon",label:"Dragon",body:"#7a3038",trim:"#ffb199"}
+],
+MAGIC_TYPES:[
+{key:"fire",label:"火球",color:"#ff6a00",inner:"#ffd166",damageRate:1.0},
+{key:"thunder",label:"雷球",color:"#fff366",inner:"#ffffff",damageRate:.82},
+{key:"poison",label:"毒球",color:"#b15cff",inner:"#62ff7d",damageRate:.65}
+]
+};
+
+const RARITIES=ItemData.RARITIES;
+const WEAPON_TYPES=ItemData.WEAPON_TYPES;
+const ARMOR_TYPES=ItemData.ARMOR_TYPES;
+const MAGIC_TYPES=ItemData.MAGIC_TYPES;
+ItemData.AFFIX_POOL=[
+{name:"猛攻",stat:"attack",min:2,max:8},
+{name:"守護",stat:"defense",min:1,max:7},
+{name:"生命",stat:"hp",min:8,max:28},
+{name:"疾風",stat:"speed",min:1,max:6},
+{name:"会心",stat:"crit",min:2,max:10},
+{name:"炎撃",stat:"fire",min:3,max:12},
+{name:"雷撃",stat:"thunder",min:3,max:12},
+{name:"毒牙",stat:"poison",min:2,max:10},
+{name:"氷牙",stat:"ice",min:2,max:10},
+{name:"闇蝕",stat:"dark",min:2,max:10},
+{name:"光印",stat:"light",min:2,max:10},
+{name:"風刃",stat:"wind",min:2,max:10},
+{name:"吸収",stat:"drain",min:1,max:5},
+{name:"幸運",stat:"luck",min:2,max:12},
+{name:"対ボス",stat:"bossDamage",min:4,max:15},
+{name:"再生",stat:"regen",min:1,max:5},
+{name:"魔力",stat:"magicPower",min:3,max:14},
+{name:"詠唱",stat:"magicSpeed",min:2,max:10}
+];
+
+ItemData.AFFIX_VISUALS={
+attack:"#ff4d4d",defense:"#7fc7ff",hp:"#ff5f8d",speed:"#9eff6f",crit:"#fff",
+fire:"#ff6a00",thunder:"#fff366",poison:"#b15cff",ice:"#9ee7ff",dark:"#4b2a7f",
+light:"#fff3a3",wind:"#9effc8",drain:"#e24bff",luck:"#ffe66d",
+bossDamage:"#ff2f2f",regen:"#52ff9a",magicPower:"#79d8ff",magicSpeed:"#caa8ff"
+};
+
+const AFFIX_POOL=ItemData.AFFIX_POOL;
+const AFFIX_VISUALS=ItemData.AFFIX_VISUALS;
+const WEAPON_NAMES=[
+{kind:"dagger",label:"短剣"},
+{kind:"sword",label:"剣"},
+{kind:"greatsword",label:"大剣"},
+{kind:"spear",label:"槍"}
+];
+
+const EQUIP_BASE_NAMES={
+armor:"鎧",
+head:"帽子",
+arm:"小手",
+waist:"腰当て",
+leg:"靴",
+neck:"首飾り",
+ring:"指輪",
+bracelet:"腕輪",
+magic:"魔法書"
+};
+
+function baseEquipName(type,affixCount){
+const base=EQUIP_BASE_NAMES[type]||"装備";
+return `${materialNameByAffixCount(affixCount)}の${base}`;
+}
+
+const MATERIAL_RANK_NAMES=[
+"木",
+"銅",
+"鉄",
+"鋼",
+"銀",
+"金",
+"光",
+"黒",
+"神"
+];
+
+function materialNameByAffixCount(count){
+return MATERIAL_RANK_NAMES[Math.min(count,8)]||"木";
+}
+
+function baseWeaponName(kind,affixCount){
+const w=WEAPON_NAMES.find(x=>x.kind===kind)||WEAPON_NAMES[1];
+return `${materialNameByAffixCount(affixCount)}の${w.label}`;
+}
+
+const AFFIX_NAME_WORDS={
+attack:"攻",
+defense:"守",
+hp:"命",
+speed:"速",
+crit:"会",
+fire:"火",
+thunder:"雷",
+poison:"毒",
+ice:"氷",
+dark:"闇",
+light:"光",
+wind:"風",
+drain:"吸",
+luck:"運",
+bossDamage:"殺",
+regen:"再",
+magicPower:"魔",
+magicSpeed:"詠"
+};
+
+function affixPrefixName(item){
+if(!item||!item.affixes?.length)return "";
+
+return item.affixes
+.slice()
+.sort((a,b)=>b.value-a.value)
+.map(a=>AFFIX_NAME_WORDS[a.stat]||"")
+.join("");
+}
+const HEAD_NAMES=[
+{name:"革帽子",kind:"cap"},
+{name:"鉄兜",kind:"helmet"},
+{name:"旅人フード",kind:"hood"},
+{name:"魔術師帽",kind:"wizard"},
+{name:"王冠",kind:"crown"}
+];
+
+const ARM_NAMES=[
+{name:"革の手袋",kind:"glove"},
+{name:"鉄の小手",kind:"gauntlet"},
+{name:"狩人の腕当て",kind:"bracer"},
+{name:"魔術師の袖",kind:"sleeve"},
+{name:"竜骨の腕当て",kind:"dragonArm"}
+];
+
+const WAIST_NAMES=[
+{name:"革のベルト",kind:"belt"},
+{name:"鉄の腰当て",kind:"guard"},
+{name:"旅人の腰袋",kind:"pouch"},
+{name:"魔術師の帯",kind:"sash"},
+{name:"竜骨の腰鎧",kind:"dragonWaist"}
+];
+
+const LEG_NAMES=[
+{name:"革の靴",kind:"boots"},
+{name:"鉄の脚甲",kind:"greaves"},
+{name:"狩人の脚当て",kind:"leggings"},
+{name:"旅人の長靴",kind:"travelerBoots"},
+{name:"竜骨の脚鎧",kind:"dragonLeg"}
+];
+
+const NECK_NAMES=[
+{name:"古びた首飾り",kind:"pendant"},
+{name:"守りの首飾り",kind:"amulet"},
+{name:"魔力の首飾り",kind:"charm"},
+{name:"獣牙の首飾り",kind:"fang"},
+{name:"竜玉の首飾り",kind:"dragonNeck"}
+];
+
+const RING_NAMES=[
+{name:"銅の指輪",kind:"copperRing"},
+{name:"銀の指輪",kind:"silverRing"},
+{name:"力の指輪",kind:"powerRing"},
+{name:"魔力の指輪",kind:"magicRing"},
+{name:"竜石の指輪",kind:"dragonRing"}
+];
+
+const BRACELET_NAMES=[
+{name:"革の腕輪",kind:"leatherBracelet"},
+{name:"鉄の腕輪",kind:"ironBracelet"},
+{name:"守りの腕輪",kind:"guardBracelet"},
+{name:"魔力の腕輪",kind:"magicBracelet"},
+{name:"竜骨の腕輪",kind:"dragonBracelet"}
+];
+
+const ARMOR_NAMES=[
+{name:"革の鎧",kind:"leather"},
+{name:"旅人の外套",kind:"cloak"},
+{name:"騎士の胸当て",kind:"knight"},
+{name:"霊樹の衣",kind:"spirit"},
+{name:"竜骨の鎧",kind:"dragon"}
+];
+const HEAD_TYPES=[
+{key:"cap",label:"Cap",color:"#8b6f34"},
+{key:"helmet",label:"Helmet",color:"#9aa6b2"},
+{key:"hood",label:"Hood",color:"#2f8f6b"},
+{key:"wizard",label:"Wizard Hat",color:"#6a4a9b"},
+{key:"crown",label:"Crown",color:"#ffd166"}
+];
+
+const ARM_TYPES=[
+{key:"glove",label:"Glove",color:"#8b6f34"},
+{key:"gauntlet",label:"Gauntlet",color:"#9aa6b2"},
+{key:"bracer",label:"Bracer",color:"#2f8f6b"},
+{key:"sleeve",label:"Sleeve",color:"#6a4a9b"},
+{key:"dragonArm",label:"Dragon Arm",color:"#c94a4a"}
+];
+
+const WAIST_TYPES=[
+{key:"belt",label:"Belt",color:"#8b6f34"},
+{key:"guard",label:"Guard",color:"#9aa6b2"},
+{key:"pouch",label:"Pouch",color:"#b98c5a"},
+{key:"sash",label:"Sash",color:"#6a4a9b"},
+{key:"dragonWaist",label:"Dragon Waist",color:"#c94a4a"}
+];
+
+const LEG_TYPES=[
+{key:"boots",label:"Boots",color:"#8b6f34"},
+{key:"greaves",label:"Greaves",color:"#9aa6b2"},
+{key:"leggings",label:"Leggings",color:"#2f8f6b"},
+{key:"travelerBoots",label:"Traveler Boots",color:"#6a4a9b"},
+{key:"dragonLeg",label:"Dragon Leg",color:"#c94a4a"}
+];
+
+const NECK_TYPES=[
+{key:"pendant",label:"Pendant"},
+{key:"amulet",label:"Amulet"},
+{key:"charm",label:"Charm"},
+{key:"fang",label:"Fang"},
+{key:"dragonNeck",label:"Dragon Neck"}
+];
+
+const RING_TYPES=[
+{key:"copperRing",label:"Copper Ring"},
+{key:"silverRing",label:"Silver Ring"},
+{key:"powerRing",label:"Power Ring"},
+{key:"magicRing",label:"Magic Ring"},
+{key:"dragonRing",label:"Dragon Ring"}
+];
+
+const BRACELET_TYPES=[
+{key:"leatherBracelet",label:"Leather Bracelet"},
+{key:"ironBracelet",label:"Iron Bracelet"},
+{key:"guardBracelet",label:"Guard Bracelet"},
+{key:"magicBracelet",label:"Magic Bracelet"},
+{key:"dragonBracelet",label:"Dragon Bracelet"}
+];
+
+const MAGIC_NAMES=[
+{name:"火球の書",kind:"fire"},
+{name:"雷球の書",kind:"thunder"},
+{name:"毒球の書",kind:"poison"}
+];
+const BASE_TREES=[
+[720,520],[760,680],[920,650],[1040,560],[620,760],[500,500],[1100,800],[1320,420],
+[300,900],[1450,980],[1580,720],[1220,1060],[880,1050],[420,1160],
+[1900,900],[2200,1200],[2600,1600],[3100,2100],[3300,2400],[2800,400],[2100,2200],
+[3900,900],[4200,1400],[4800,2000],[5200,3000],[5600,3700],[3400,800],[4600,600],
+[700,3200],[1400,3600],[2400,3400],[3600,3200],[5000,3800],
+[6400,1200],[7200,2200],[8100,3100],[9300,4200],[10500,6400],[11200,7600],
+[7600,7000],[6200,5400],[9800,1800],[11600,900]
+];
+const EnemyData={
+
+bossDamageMultiplier:{
+3:1.2,
+10:1.5,
+16:2,
+24:3,
+32:4,
+40:5,
+50:6
+},
+
+bossAttackSpeed:{
+3:.9,
+10:.8,
+16:.7,
+24:.6,
+32:.5,
+40:.4,
+50:.3
+}
+
+};
+
+const VILLAGE={
+name:"木漏れ日の村",x:800,y:600,radius:190,healRate:50,
+houses:[
+{x:680,y:520,w:74,h:58,roof:"#8b3e34",wall:"#c89b62"},
+{x:835,y:492,w:86,h:64,roof:"#6a4a9b",wall:"#b98c5a"},
+{x:930,y:650,w:78,h:62,roof:"#2f6f6b",wall:"#caa36f"},
+{x:650,y:675,w:88,h:66,roof:"#8b6f34",wall:"#b98c5a"}
+],
+npcs:[
+{x:765,y:570,color:"#ffd166",label:"Inn"},
+{x:868,y:590,color:"#bfe2ff",label:"Smith"},
+{x:740,y:665,color:"#ffb3d1",label:"Shop"}
+]
+};
+
+const CAMP_CONFIG={
+radius:120,
+healRate:18,
+lifeTime:60*60*4,
+shopRange:115,
+minVillageDistance:520
+};;
+function uid(){
+return globalThis.crypto&&crypto.randomUUID
+? crypto.randomUUID()
+: String(Date.now()+Math.random());
+}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function rand(min,max){return min+Math.random()*(max-min)}
+function randInt(min,max){return Math.floor(rand(min,max+1))}
+function dist(ax,ay,bx,by){return Math.hypot(ax-bx,ay-by)}
+function choose(list){return list[Math.floor(Math.random()*list.length)]}
+function maxVillageDistance(){
+const corners=[[0,0],[CONFIG.worldW,0],[0,CONFIG.worldH],[CONFIG.worldW,CONFIG.worldH]];
+let max=1;
+for(const [x,y] of corners)max=Math.max(max,dist(VILLAGE.x,VILLAGE.y,x,y));
+return max;
+}
+const MAX_VILLAGE_DISTANCE=maxVillageDistance();
+function distanceRateFromVillage(x,y){
+return clamp(dist(x,y,VILLAGE.x,VILLAGE.y)/MAX_VILLAGE_DISTANCE,0,1);
+}
+const AreaData={
+zones:[
+{key:"village",name:"村周辺",min:0,max:.16,bgm:"village",enemies:["goblin","daggerGoblin","spearman","greatsword"]},
+{key:"field",name:"草地",min:.16,max:.30,bgm:"field",enemies:["goblin","wolf"]},
+{key:"forest",name:"森",min:.30,max:.46,bgm:"forest",enemies:["wolf"]},
+{key:"deepForest",name:"深い森",min:.46,max:.60,bgm:"deepForest",enemies:["wolf","spider"]},
+{key:"poison",name:"毒の森",min:.60,max:.74,bgm:"poison",enemies:["spider"]},
+{key:"rock",name:"岩場",min:.74,max:.88,bgm:"rock",enemies:["golem"]},
+{key:"deep",name:"最奥",min:.88,max:1.01,bgm:"deep",enemies:["goblin","wolf","spider","golem"]}
+],
+
+byRate(rate){
+return this.zones.find(z=>rate>=z.min&&rate<z.max)||this.zones[0];
+},
+
+byLocation(x,y){
+return this.byRate(distanceRateFromVillage(x,y));
+}
+};
+
+function enemyLevelByDistance(x,y){
+const rate=distanceRateFromVillage(x,y);
+return Math.max(1,Math.floor(rate*80)+1);
+}
+function rollBossRank(level){
+const r=Math.random();
+if(level>=60&&r<.01)return 50;
+if(level>=50&&r<.02)return 40;
+if(level>=42&&r<.03)return 32;
+if(level>=34&&r<.04)return 24;
+if(level>=26&&r<.05)return 16;
+if(level>=20&&r<.06)return 12;
+if(level>=18&&r<.07)return 10;
+if(level>=12&&r<.08)return 3;
+if(level>=8&&r<.10)return 1;
+return 0;
+}
+function scoreItem(item){
+if(!item)return 0;
+
+const affixes=Array.isArray(item.affixes)?item.affixes:[];
+const rarityBonus=item.rarity&&item.rarity.bonus?item.rarity.bonus:1;
+const basePower=Number(item.basePower)||0;
+const level=Number(item.level)||1;
+
+return basePower+
+affixes.reduce((s,a)=>s+(Number(a.value)||0),0)+
+level*2+
+rarityBonus*10;
+}
+
+function itemRankColor(item){
+if(!item)return "#20242a";
+
+const n=item.affixes.length;
+
+const colors=[
+"#888888",
+"#44cc66",
+"#3399ff",
+"#ff4444",
+"#ffffff",
+"#ff9900",
+"#ff66cc",
+"#050505"
+];
+
+let color=colors[Math.max(0,Math.min(7,n-1))];
+
+if(n>=10){
+const rainbow=[
+"#ff4444",
+"#ff9900",
+"#ffff55",
+"#44cc66",
+"#3399ff",
+"#aa66ff",
+"#ff66cc"
+];
+color=rainbow[Math.floor(performance.now()/90)%rainbow.length];
+}
+
+return color;
+}
+function segmentHit(ax,ay,bx,by,px,py,r){
+const dx=bx-ax,dy=by-ay,lenSq=dx*dx+dy*dy;
+if(lenSq===0)return{hit:dist(ax,ay,px,py)<=r,t:0};
+const t=clamp(((px-ax)*dx+(py-ay)*dy)/lenSq,0,1);
+const cx=ax+dx*t,cy=ay+dy*t;
+if(dist(cx,cy,px,py)>r)return{hit:false,t};
+return{hit:true,t};
+}
+function segmentCross(ax,ay,bx,by,cx,cy,dx,dy){
+function ccw(px,py,qx,qy,rx,ry){
+return (ry-py)*(qx-px)>(qy-py)*(rx-px);
+}
+return ccw(ax,ay,cx,cy,dx,dy)!==ccw(bx,by,cx,cy,dx,dy)&&
+ccw(ax,ay,bx,by,cx,cy)!==ccw(ax,ay,bx,by,dx,dy);
+}
+
+function stat(game,name){return game.inventory.sumStat(name)||0}
+
+const CombatSystem={
+stat(game,name){
+return game.inventory.sumStat(name)||0;
+},
+calcDamage(game,base,enemy,type){
+let dmg=base+this.stat(game,"attack");
+if(type==="magic")dmg+=this.stat(game,"magicPower");
+if(type==="fire")dmg+=this.stat(game,"fire")+this.stat(game,"magicPower");
+if(type==="thunder")dmg+=this.stat(game,"thunder")+this.stat(game,"magicPower");
+if(type==="poison")dmg+=this.stat(game,"poison")+this.stat(game,"magicPower");
+if(enemy&&enemy.bossRank)dmg+=this.stat(game,"bossDamage");
+let critical=false;
+if(Math.random()<this.stat(game,"crit")*.01){
+critical=true;
+dmg=Math.floor(dmg*1.7);
+}
+return{damage:Math.max(1,Math.floor(dmg)),critical};
+},
+applyDrain(game,damage){
+const v=this.stat(game,"drain");
+if(v>0)game.player.hp=clamp(game.player.hp+damage*v*.02,0,game.player.maxHp);
+},
+applyRegen(game){
+const v=this.stat(game,"regen");
+if(v>0)game.player.hp=clamp(game.player.hp+v*.015,0,game.player.maxHp);
+},
+applyBurn(enemy,power){
+if(power>0){enemy.burnTime=120+power*5;enemy.burnPower=power}
+},
+applyPoison(enemy,power,bonus=1){
+if(power>0){enemy.poisonTime=(180+power*10)*bonus;enemy.poisonPower=power}
+},
+applyThunder(game,enemy,power,bonus=1){
+if(power<=0)return;
+enemy.stunTime=Math.max(enemy.stunTime,(2+power*.2)*bonus);
+let chained=0;
+for(const e of game.enemies){
+if(e!==enemy&&e.alive&&dist(e.x,e.y,enemy.x,enemy.y)<120&&chained<2){
+e.takeDamage(Math.max(1,Math.floor(power*.7)));
+e.stunTime=Math.max(e.stunTime,2+power*.1);
+chained++;
+}
+}
+},
+applyIce(enemy,power){
+if(power<=0)return;
+enemy.slowTime=Math.max(enemy.slowTime,100+power*8);
+enemy.slowPower=Math.max(enemy.slowPower,.25+Math.min(.55,power*.015));
+enemy.iceStack=(enemy.iceStack||0)+1;
+if(enemy.iceStack>=3){
+enemy.stunTime=Math.max(enemy.stunTime,40+power*2);
+enemy.iceStack=0;
+}
+},
+applyDark(game,enemy,power,damage){
+if(power<=0)return;
+enemy.darkTime=Math.max(enemy.darkTime,120+power*6);
+enemy.darkPower=power;
+game.player.hp=clamp(game.player.hp+damage*(power*.004),0,game.player.maxHp);
+},
+applyLight(game,enemy,power,damage){
+if(power<=0)return;
+const extra=Math.max(1,Math.floor(damage*(.12+power*.004)));
+enemy.takeDamage(extra);
+game.player.hp=clamp(game.player.hp+extra*.25,0,game.player.maxHp);
+},
+applyWind(enemy,power,dx,dy){
+if(power<=0)return;
+const k=2+power*.18;
+enemy.knockback(dx,dy,k);
+},
+applyElementEffects(game,enemy,damage,dx,dy){
+this.applyBurn(enemy,this.stat(game,"fire"));
+this.applyPoison(enemy,this.stat(game,"poison"));
+this.applyThunder(game,enemy,this.stat(game,"thunder"));
+this.applyIce(enemy,this.stat(game,"ice"));
+this.applyDark(game,enemy,this.stat(game,"dark"),damage);
+this.applyLight(game,enemy,this.stat(game,"light"),damage);
+this.applyWind(enemy,this.stat(game,"wind"),dx,dy);
+}
+};
+
+const DamageSystem={
+
+damageEnemy(enemy,amount){
+if(!enemy||!enemy.alive)return;
+
+enemy.hp-=amount;
+enemy.hitTimer=8;
+
+if(enemy.hp<=0){
+enemy.hp=0;
+enemy.alive=false;
+}
+},
+
+damagePlayer(game,player,amount){
+if(!game||!player)return;
+if(player.invuln>0)return;
+
+const defense=stat(game,"defense");
+const finalDamage=Math.max(1,amount-defense);
+
+player.hp=clamp(
+player.hp-finalDamage,
+0,
+player.maxHp
+);
+
+player.invuln=45;
+},
+
+healPlayer(player,amount){
+if(!player)return;
+
+player.hp=clamp(
+player.hp+amount,
+0,
+player.maxHp
+);
+}
+
+};
+
+function calcDamage(game,base,enemy,type){return CombatSystem.calcDamage(game,base,enemy,type)}
+function makeVisualTrees(){
+const trees=BASE_TREES.map(([x,y])=>({x,y,scale:rand(.85,1.25),tone:rand(0,1)}));
+let tries=0;
+while(trees.length<CONFIG.visualTreeCount&&tries<CONFIG.visualTreeCount*80){
+tries++;
+const x=randInt(80,CONFIG.worldW-80);
+const y=randInt(80,CONFIG.worldH-80);
+if(dist(x,y,VILLAGE.x,VILLAGE.y)<VILLAGE.radius+220)continue;
+
+let blocked=false;
+
+for(const h of VILLAGE.houses){
+if(dist(x,y,h.x,h.y)<90){
+blocked=true;
+break;
+}
+}
+
+if(blocked)continue;
+
+for(const n of VILLAGE.npcs){
+if(dist(x,y,n.x,n.y)<80){
+blocked=true;
+break;
+}
+}
+
+if(blocked)continue;
+let ok=true;
+for(const t of trees){
+if(dist(x,y,t.x,t.y)<CONFIG.treeMinDistance){ok=false;break}
+}
+if(ok)trees.push({x,y,scale:rand(.75,1.45),tone:rand(0,1)});
+}
+return trees;
+}
+function applyDrain(game,damage){
+return CombatSystem.applyDrain(game,damage);
+}
+function applyRegen(game){
+return CombatSystem.applyRegen(game);
+}
+function applyBurn(enemy,power){
+return CombatSystem.applyBurn(enemy,power);
+}
+function applyPoison(enemy,power,bonus=1){
+return CombatSystem.applyPoison(enemy,power,bonus);
+}
+function applyThunder(game,enemy,power,bonus=1){
+return CombatSystem.applyThunder(game,enemy,power,bonus);
+}
+function applyIce(enemy,power){
+return CombatSystem.applyIce(enemy,power);
+}
+function applyDark(game,enemy,power,damage){
+return CombatSystem.applyDark(game,enemy,power,damage);
+}
+function applyLight(game,enemy,power,damage){
+return CombatSystem.applyLight(game,enemy,power,damage);
+}
+function applyWind(enemy,power,dx,dy){
+return CombatSystem.applyWind(enemy,power,dx,dy);
+}
+function applyElementEffects(game,enemy,damage,dx,dy){
+return CombatSystem.applyElementEffects(game,enemy,damage,dx,dy);
+}
+class Input{
+constructor(){
+this.moveX=0;this.moveY=0;this.padX=0;this.padY=0;this.keyX=0;this.keyY=0;
+this.pauseQueued=false;this.menuQueued=false;this.keys=new Set();
+this.pad=document.getElementById("pad");
+this.stick=document.getElementById("stick");
+this.maxRadius=35;this.centerX=0;this.centerY=0;this.bind();
+}
+bind(){
+this.updatePadRect();
+addEventListener("resize",()=>this.updatePadRect());
+this.pad.addEventListener("touchmove",e=>this.onPadMove(e.touches[0],e),{passive:false});
+this.pad.addEventListener("touchend",()=>this.resetPad());
+this.pad.addEventListener("pointerdown",e=>this.onPadMove(e,e));
+this.pad.addEventListener("pointermove",e=>{if(e.buttons)this.onPadMove(e,e)});
+this.pad.addEventListener("pointerup",()=>this.resetPad());
+document.getElementById("pauseBtn").addEventListener("touchstart",e=>this.queue(e,"pauseQueued"),{passive:false});
+document.getElementById("menuBtn").addEventListener("touchstart",e=>this.queue(e,"menuQueued"),{passive:false});
+document.getElementById("pauseBtn").addEventListener("click",e=>this.queue(e,"pauseQueued"));
+document.getElementById("menuBtn").addEventListener("click",e=>this.queue(e,"menuQueued"));
+
+document.getElementById("quickHerbBtn").addEventListener("click",e=>{
+e.preventDefault();
+ShopSystem.useHerb(globalThis.game);
+});
+addEventListener("keydown",e=>this.onKey(e,true));
+addEventListener("keyup",e=>this.onKey(e,false));
+}
+queue(e,key){e.preventDefault();this[key]=true}
+updatePadRect(){const r=this.pad.getBoundingClientRect();this.centerX=r.left+r.width/2;this.centerY=r.top+r.height/2}
+onPadMove(point,e){
+e.preventDefault();
+let x=point.clientX-this.centerX,y=point.clientY-this.centerY;
+const d=Math.hypot(x,y);
+if(d>this.maxRadius){x=x/d*this.maxRadius;y=y/d*this.maxRadius}
+this.stick.style.transform=`translate(${x}px,${y}px)`;
+this.padX=x/this.maxRadius;this.padY=y/this.maxRadius;
+this.composeMove();
+}
+resetPad(){this.stick.style.transform="translate(0,0)";this.padX=0;this.padY=0;this.composeMove()}
+onKey(e,down){
+const k=e.key.toLowerCase();
+if(["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","escape","tab"].includes(k))e.preventDefault();
+if(down&&k==="escape"){this.pauseQueued=true;return}
+if(down&&k==="tab"){this.menuQueued=true;return}
+if(down)this.keys.add(k);else this.keys.delete(k);
+}
+updateKeyboardVector(){
+let x=0,y=0;
+if(this.keys.has("a")||this.keys.has("arrowleft"))x--;
+if(this.keys.has("d")||this.keys.has("arrowright"))x++;
+if(this.keys.has("w")||this.keys.has("arrowup"))y--;
+if(this.keys.has("s")||this.keys.has("arrowdown"))y++;
+if(x||y){const n=Math.hypot(x,y);this.keyX=x/n;this.keyY=y/n}else{this.keyX=0;this.keyY=0}
+this.composeMove();
+}
+composeMove(){if(this.keyX||this.keyY){this.moveX=this.keyX;this.moveY=this.keyY;return}this.moveX=this.padX;this.moveY=this.padY}
+consume(key){const v=this[key];this[key]=false;return v}
+}
+class Camera{
+constructor(){
+this.x=0;
+this.y=0;
+this.zoom=1.2;
+}
+
+follow(t){
+const viewW=CONFIG.viewW/this.zoom;
+const viewH=CONFIG.viewH/this.zoom;
+
+this.x=clamp(
+t.x-viewW/2,
+-viewW/2,
+CONFIG.worldW-viewW/2
+);
+
+this.y=clamp(
+t.y-viewH/2,
+-viewH/2,
+CONFIG.worldH-viewH/2
+);
+}
+
+sx(x){
+return (x-this.x)*this.zoom;
+}
+
+sy(y){
+return (y-this.y)*this.zoom;
+}
+}
+class Inventory{
+constructor(){
+this.items=[];
+this.weapon=null;
+this.armor=null;
+this.magic=null;
+
+this.equipment={};
+
+for(const slot of EquipmentData.currentSlots){
+this.equipment[slot]=null;
+}
+
+this.typeLimits={};
+
+for(const slot of EquipmentData.currentSlots){
+this.typeLimits[slot]=CONFIG.baseInventoryLimit;
+}
+
+this.typeLimits.ring=CONFIG.baseInventoryLimit;
+this.typeLimits.bracelet=CONFIG.baseInventoryLimit;
+
+this.fixExtraEquipSlots();
+}
+limit(type){return this.typeLimits[type]||CONFIG.baseInventoryLimit}
+itemsByType(type){return this.items.filter(i=>i.type===type)}
+bestItem(type){const list=this.itemsByType(type);if(!list.length)return null;return list.reduce((best,item)=>scoreItem(item)>scoreItem(best)?item:best,list[0])}
+fixExtraEquipSlots(){
+for(const slot of AUTO_EQUIP_SLOTS){
+const current=this.equipment[slot];
+
+if(
+current &&
+(
+current.type!==slot ||
+!this.items.some(i=>i.id===current.id)
+)
+){
+this.equipment[slot]=null;
+}
+
+if(!this.equipment[slot]){
+this.equipment[slot]=this.bestItem(slot);
+}
+}
+}
+add(item){
+this.items.unshift(item);
+
+if(item.type==="weapon"){
+if(!this.weapon||scoreItem(item)>scoreItem(this.weapon)){
+this.weapon=item;
+}
+}
+
+else if(item.type==="armor"){
+if(!this.armor||scoreItem(item)>scoreItem(this.armor)){
+this.armor=item;
+}
+}
+
+else if(item.type==="magic"){
+if(!this.magic||scoreItem(item)>scoreItem(this.magic)){
+this.magic=item;
+}
+}
+
+else if(AUTO_EQUIP_SLOTS.includes(item.type)){
+if(!this.equipment[item.type]||scoreItem(item)>scoreItem(this.equipment[item.type])){
+this.equipment[item.type]=item;
+}
+}
+
+this.trimByType(item.type);
+this.fixEquips();
+}
+trimByType(type){
+let list=this.itemsByType(type);
+const limit=this.limit(type);
+while(list.length>limit){
+const removable=list.filter(
+item=>!this.isEquipped(item)&&!item.locked
+);
+if(!removable.length){
+break;
+}
+
+const targetList=removable;
+const weakest=targetList.reduce((w,item)=>scoreItem(item)<scoreItem(w)?item:w,targetList[0]);
+
+if(!weakest)break;
+
+this.items=this.items.filter(i=>i.id!==weakest.id);
+
+if(this.weapon&&this.weapon.id===weakest.id)this.weapon=null;
+if(this.armor&&this.armor.id===weakest.id)this.armor=null;
+if(this.magic&&this.magic.id===weakest.id)this.magic=null;
+
+for(const slot of EquipmentData.currentSlots){
+if(
+this.equipment[slot] &&
+this.equipment[slot].id===weakest.id
+){
+this.equipment[slot]=null;
+}
+}
+
+list=this.itemsByType(type);
+}
+}
+trimAll(){
+for(const type of [
+"weapon",
+"armor",
+"magic",
+"head",
+"arm",
+"waist",
+"leg",
+"neck",
+"ring",
+"bracelet"
+]){
+this.trimByType(type);
+}
+
+this.fixEquips();
+}
+fixEquips(){
+for(const slot of EquipmentData.currentSlots){
+const item=this.equipment[slot];
+
+if(!item){
+continue;
+}
+
+if(!this.items.some(i=>i.id===item.id)){
+this.equipment[slot]=null;
+continue;
+}
+
+if(slot==="ringL"||slot==="ringR"){
+if(item.type!=="ring")this.equipment[slot]=null;
+continue;
+}
+
+if(slot==="braceletL"||slot==="braceletR"){
+if(item.type!=="bracelet")this.equipment[slot]=null;
+continue;
+}
+
+if(item.type!==slot){
+this.equipment[slot]=null;
+}
+}
+
+const usedIds=new Set();
+
+for(const slot of EquipmentData.currentSlots){
+const item=this.equipment[slot];
+
+if(!item)continue;
+
+if(usedIds.has(item.id)){
+this.equipment[slot]=null;
+continue;
+}
+
+usedIds.add(item.id);
+}
+
+if(!this.weapon || !this.items.some(i=>i.id===this.weapon.id) || this.weapon.type!=="weapon"){
+this.weapon=this.equipment.weapon;
+}
+
+if(!this.armor || !this.items.some(i=>i.id===this.armor.id) || this.armor.type!=="armor"){
+this.armor=this.equipment.armor;
+}
+
+if(!this.magic || !this.items.some(i=>i.id===this.magic.id) || this.magic.type!=="magic"){
+this.magic=this.equipment.magic;
+}
+
+if(!this.weapon)this.weapon=this.bestItem("weapon");
+if(!this.armor)this.armor=this.bestItem("armor");
+if(!this.magic)this.magic=this.bestItem("magic");
+
+this.equipment.weapon=this.weapon;
+this.equipment.armor=this.armor;
+this.equipment.magic=this.magic;
+
+this.fixExtraEquipSlots();
+}
+equip(id){
+const item=this.items.find(i=>i.id===id);
+if(!item)return null;
+
+if(item.type==="ring"){
+
+if(this.equipment.ringL===item){
+this.equipment.ringL=null;
+return item;
+}
+
+if(this.equipment.ringR===item){
+this.equipment.ringR=null;
+return item;
+}
+
+if(this.equipment.ringL&&this.equipment.ringL.id===item.id){
+this.equipment.ringL=null;
+}
+
+if(this.equipment.ringR&&this.equipment.ringR.id===item.id){
+this.equipment.ringR=null;
+}
+
+if(!this.equipment.ringL){
+this.equipment.ringL=item;
+}else if(!this.equipment.ringR){
+this.equipment.ringR=item;
+}else{
+this.equipment.ringL=item;
+}
+
+return item;
+}
+
+if(item.type==="bracelet"){
+
+if(this.equipment.braceletL===item){
+this.equipment.braceletL=null;
+return item;
+}
+
+if(this.equipment.braceletR===item){
+this.equipment.braceletR=null;
+return item;
+}
+
+if(this.equipment.braceletL&&this.equipment.braceletL.id===item.id){
+this.equipment.braceletL=null;
+}
+
+if(this.equipment.braceletR&&this.equipment.braceletR.id===item.id){
+this.equipment.braceletR=null;
+}
+
+if(!this.equipment.braceletL){
+this.equipment.braceletL=item;
+}else if(!this.equipment.braceletR){
+this.equipment.braceletR=item;
+}else{
+this.equipment.braceletL=item;
+}
+
+return item;
+}
+
+if(item.type==="neck"){
+
+if(this.equipment.neck===item){
+this.equipment.neck=null;
+
+return item;
+}
+
+this.equipment.neck=item;
+
+return item;
+}
+
+if(this.equipment.hasOwnProperty(item.type)){
+this.equipment[item.type]=item;
+}
+
+if(item.type==="weapon")this.weapon=item;
+if(item.type==="armor")this.armor=item;
+if(item.type==="magic")this.magic=item;
+
+return item;
+}
+isEquipped(item){
+if(this.equipment[item.type]===item)return true;
+
+if(item.type==="ring"){
+if(this.equipment.ringL===item)return true;
+if(this.equipment.ringR===item)return true;
+}
+
+if(item.type==="bracelet"){
+if(this.equipment.braceletL===item)return true;
+if(this.equipment.braceletR===item)return true;
+}
+
+return false;
+}
+weaponSpec(){
+if(!this.equipment.weapon){
+return {key:"hand",label:"素手",range:22,arc:1.8,duration:10,width:2,color:"#f0c090",damage:-5,knock:0.5};
+}
+const k=this.equipment.weapon.kind||"sword";
+return WEAPON_TYPES.find(w=>w.key===k)||WEAPON_TYPES[0];
+}
+armorSpec(){const k=this.equipment.armor?.kind||"leather";return ARMOR_TYPES.find(a=>a.key===k)||ARMOR_TYPES[0]}
+magicSpec(){const k=this.equipment.magic?.kind||"fire";return MAGIC_TYPES.find(m=>m.key===k)||MAGIC_TYPES[0]}
+equippedItems(){
+return EquipmentData.currentSlots
+.map(slot=>this.equipment[slot])
+.filter(Boolean);
+}
+
+sumStat(statName){
+return this.equippedItems()
+.flatMap(i=>i.affixes)
+.filter(a=>a.stat===statName)
+.reduce((s,a)=>s+a.value,0);
+}
+
+equippedAffixes(){
+return this.equippedItems()
+.flatMap(i=>i.affixes);
+}
+attackBonus(){return this.equipment.weapon?Math.floor(this.equipment.weapon.basePower/2)+this.sumStat("attack"):0}
+defenseBonus(){return this.equipment.armor?Math.floor(this.equipment.armor.basePower/3)+this.sumStat("defense"):0}
+magicBonus(){return this.equipment.magic?Math.floor(this.equipment.magic.basePower/2)+this.sumStat("magicPower"):0}
+}
+class LootFactory{
+static create(enemy,game){
+const type=this.rollType();
+const luck=game?stat(game,"luck"):0;
+const rarity=this.rollRarity(enemy,game,luck);
+const level=enemy.level;
+const affixCount=this.rollAffixCount(type,enemy,luck);
+const tpl=this.templateByType(type);
+const base=this.basePower(type,level,enemy);
+
+const item={
+id:uid(),
+locked:false,
+type,
+level,
+rarity,
+kind:tpl.kind,
+name:tpl.name||tpl.label||"",
+displayName:tpl.name||tpl.label||"",
+basePower:Math.round(base*rarity.bonus),
+affixes:this.makeAffixes(type,affixCount,enemy,rarity)
+};
+
+this.applyDisplayName(item);
+
+return item;
+}
+
+static rollType(){
+const roll=Math.random();
+if(roll<.30)return "weapon";
+if(roll<.50)return "armor";
+if(roll<.62)return "head";
+if(roll<.74)return "arm";
+if(roll<.84)return "waist";
+if(roll<.92)return "leg";
+if(roll<.95)return "neck";
+if(roll<.98)return "ring";
+return "bracelet";
+}
+
+static rollAffixCount(type,enemy,luck){
+const level=enemy.level;
+let count=enemy.bossRank>0
+?Math.min(6,Math.ceil(enemy.bossRank/8))
+:randInt(0,Math.min(3,Math.floor(level/4)));
+
+if(type==="magic")count=Math.max(1,count);
+if(Math.random()<luck*.02)count++;
+if(enemy.distanceRate>=.9&&enemy.bossRank>0)count=Math.max(count,4);
+
+return Math.min(6,count);
+}
+
+static basePower(type,level,enemy){
+const baseByType={
+weapon:5,
+armor:4,
+head:3,
+arm:3,
+waist:3,
+leg:3,
+neck:4,
+ring:4,
+bracelet:4,
+magic:6
+};
+
+return Math.round(
+(baseByType[type]||6)
++level*rand(1.2,2.2)
++enemy.bossRank*rand(4,8)
+);
+}
+
+static templateByType(type){
+const table={
+weapon:WEAPON_NAMES,
+armor:ARMOR_NAMES,
+magic:MAGIC_NAMES,
+head:HEAD_NAMES,
+arm:ARM_NAMES,
+waist:WAIST_NAMES,
+leg:LEG_NAMES,
+neck:NECK_NAMES,
+ring:RING_NAMES,
+bracelet:BRACELET_NAMES
+};
+
+return choose(table[type]||WEAPON_NAMES);
+}
+
+static makeAffixes(type,count,enemy,rarity){
+const affixes=[];
+const used=new Set();
+
+for(let i=0;i<count;i++){
+let pool=AFFIX_POOL.filter(a=>!used.has(a.name));
+
+if(type==="magic"){
+pool=pool.filter(a=>[
+"fire",
+"thunder",
+"poison",
+"ice",
+"dark",
+"light",
+"wind",
+"magicPower",
+"magicSpeed",
+"crit",
+"luck",
+"drain",
+"regen",
+"bossDamage"
+].includes(a.stat));
+
+if(!pool.length)pool=AFFIX_POOL.filter(a=>!used.has(a.name));
+}
+
+const a=choose(pool.length?pool:AFFIX_POOL);
+used.add(a.name);
+
+let value=Math.round(
+rand(a.min,a.max)*
+(1+enemy.level/12)*
+(1+enemy.bossRank/10)*
+rarity.bonus
+);
+
+if(enemy.distanceRate>=.9&&enemy.bossRank>0)value=Math.round(value*1.25);
+
+affixes.push({name:a.name,stat:a.stat,value});
+}
+
+return affixes;
+}
+
+static applyDisplayName(item){
+if(item.type==="weapon"){
+item.name=baseWeaponName(item.kind,item.affixes.length);
+item.displayName=affixPrefixName(item)+item.name;
+}
+
+else{
+item.name=baseEquipName(item.type,item.affixes.length);
+item.displayName=affixPrefixName(item)+item.name;
+}
+}
+
+static rollRarity(enemy,game,luck){
+const rate=enemy.distanceRate||0;
+const boss=enemy.bossRank||0;
+const r=Math.random();
+let legendary=0,epic=0,rare=0;
+if(rate<.30){
+legendary=0;
+epic=.02+luck*.0008;
+rare=.22+rate*.35+luck*.002;
+}else if(rate<.70){
+legendary=.002+(rate-.30)*.025+boss*.0008+luck*.001;
+epic=.08+(rate-.30)*.28+boss*.002+luck*.002;
+rare=.34+(rate-.30)*.18+luck*.002;
+}else if(rate<.90){
+legendary=.015+(rate-.70)*.18+boss*.0025+luck*.0015;
+epic=.22+(rate-.70)*.38+boss*.003+luck*.002;
+rare=.42+luck*.001;
+}else{
+legendary=.10+(rate-.90)*1.6+boss*.006+luck*.002;
+epic=.36+(rate-.90)*.5+boss*.002+luck*.0015;
+rare=.36;
+}
+if(rate<.30)legendary=0;
+legendary=clamp(legendary,0,.42);
+epic=clamp(epic,0,.55);
+rare=clamp(rare,0,.62);
+if(r<legendary)return RARITIES[3];
+if(r<legendary+epic)return RARITIES[2];
+if(r<legendary+epic+rare)return RARITIES[1];
+return RARITIES[0];
+}
+}
+class Player{
+constructor(){
+this.x=800;this.y=600;this.size=24;this.hp=100;this.maxHp=100;
+this.gold=0;
+this.herb=0;
+this.materials={
+"鉄くず":0,
+"毛皮":0,
+"糸":0,
+"石材":0
+};
+this.dirX=0;this.dirY=1;this.invuln=0;this.attackTimer=0;this.magicTimer=0;
+this.weaponDurability=100;
+this.attackHitIds=new Set();this.swordX=this.x;this.swordY=this.y;
+}
+update(game){
+const input=game.input;
+let mx=input.moveX,my=input.moveY;
+this.maxHp=CONFIG.baseHp+stat(game,"hp")*8;
+this.hp=clamp(this.hp,0,this.maxHp);
+const speedStat=stat(game,"speed");
+
+const speedBonus=(1.0*speedStat)/(speedStat+100);
+
+const speed=Math.min(
+3.0,
+2.0+speedBonus
+);
+const dt=this.dt||1;
+
+this.x=clamp(
+this.x+mx*speed*dt,
+10,
+CONFIG.worldW-10
+);
+
+this.y=clamp(
+this.y+my*speed*dt,
+10,
+CONFIG.worldH-10
+);
+if(mx||my){this.dirX=mx;this.dirY=my}
+if(this.invuln>0)this.invuln--;
+if(this.magicTimer>0)this.magicTimer--;
+
+if(this.poisonTime>0){
+this.poisonTime--;
+if(this.poisonTime%30===0){
+this.hp=clamp(this.hp-(this.poisonPower||1),0,this.maxHp);
+}
+}
+
+applyRegen(game);
+let target=null,min=360;
+for(const e of game.enemies){
+if(!e.alive)continue;
+const d=dist(this.x,this.y,e.x,e.y);
+if(d<min){min=d;target=e}
+}
+if(target&&!game.paused&&!game.menuOpen&&!game.playerInVillage){
+const a=Math.atan2(target.y-this.y,target.x-this.x);
+this.dirX=Math.cos(a);this.dirY=Math.sin(a);
+const spec=game.inventory.weaponSpec();
+const meleeRange=spec.range+target.size/2+12;
+if(min<=meleeRange&&this.attackTimer<=0)this.startAttack(game);
+if(false&&this.magicTimer<=0){
+game.castMagic();
+this.magicTimer=Math.max(90,180-Math.floor((stat(game,"speed")+stat(game,"magicSpeed"))*.6));
+}
+}
+if(this.attackTimer>0)this.updateAttack(game);
+}
+startAttack(game){
+if(game.playerInVillage||game.nearCamp){
+return;
+}
+
+const spec=game.inventory.weaponSpec();
+
+const weaponItem=game.inventory.equipment.weapon;
+
+if(weaponItem){
+if(weaponItem.durability==null)weaponItem.durability=100;
+
+weaponItem.durability=clamp(
+weaponItem.durability-0.2,
+0,
+100
+);
+
+if(
+weaponItem.durability<=0 &&
+!weaponItem.locked
+){
+game.spawnAffixBurst(
+this.x,
+this.y,
+"crit"
+);
+
+game.addLog(
+`${weaponItem.displayName||weaponItem.name} が壊れた`
+);
+
+game.inventory.items=
+game.inventory.items.filter(
+i=>i.id!==weaponItem.id
+);
+
+game.inventory.weapon=null;
+game.inventory.equipment.weapon=null;
+
+game.inventory.fixEquips();
+}
+}
+
+this.attackTotal=Math.max(10,spec.duration*2-Math.floor(stat(game,"speed")*.01));
+this.attackTimer=this.attackTotal;
+this.attackHitIds.clear();
+}
+updateAttack(game){
+const spec=game.inventory.weaponSpec();
+this.attackTimer--;
+const angle=Math.atan2(this.dirY,this.dirX);
+const total=Math.max(1,this.attackTotal||spec.duration);
+const swing=clamp((total-this.attackTimer)/total,0,1);
+let swordAngle=angle;
+let len=spec.range;
+
+if(spec.key==="spear"){
+const pull=swing<0.45
+? -18*(swing/0.45)
+: -18+((swing-0.45)/0.55)*(len+18);
+
+this.swordX=this.x+Math.cos(angle)*pull;
+this.swordY=this.y+Math.sin(angle)*pull;
+}else{
+swordAngle=angle-spec.arc/2+swing*spec.arc;
+this.swordX=this.x+Math.cos(swordAngle)*len;
+this.swordY=this.y+Math.sin(swordAngle)*len;
+}
+for(const enemy of game.enemies){
+if(!enemy.alive)continue;
+if(enemy.attackPhase!=="active")continue;
+
+const enemyLen=CONFIG.enemySwordRange+(enemy.bossRank?18:0)+Math.min(30,enemy.level*.28);
+const enemyTotal=CONFIG.enemySwordActive;
+const enemyProgress=clamp((enemyTotal-enemy.attackTimer)/enemyTotal,0,1);
+
+const enemyBaseAngle=Math.atan2(enemy.attackDirY,enemy.attackDirX);
+const enemyArc=enemy.bossRank?2.4:2.0;
+const enemySwordAngle=enemyBaseAngle-enemyArc/2+enemyProgress*enemyArc;
+
+const ex1=enemy.x;
+const ey1=enemy.y;
+const ex2=enemy.x+Math.cos(enemySwordAngle)*enemyLen;
+const ey2=enemy.y+Math.sin(enemySwordAngle)*enemyLen;
+
+if(segmentCross(this.x,this.y,this.swordX,this.swordY,ex1,ey1,ex2,ey2)){
+const d=Math.max(1,dist(this.x,this.y,enemy.x,enemy.y));
+const nx=(this.x-enemy.x)/d;
+const ny=(this.y-enemy.y)/d;
+const clashPower=10;
+
+this.x+=nx*clashPower*.55;
+this.y+=ny*clashPower*.55;
+enemy.knockback(-nx,-ny,clashPower);
+
+enemy.clashFlash=8;
+enemy.attackTimer=Math.max(enemy.attackTimer,6);
+enemy.attackPhase="active";
+this.attackTimer=Math.max(this.attackTimer,6);
+
+const weaponItem=game.inventory.equipment.weapon;
+
+if(weaponItem){
+if(weaponItem.durability==null)weaponItem.durability=100;
+
+weaponItem.durability=clamp(
+weaponItem.durability-3,
+0,
+100
+);
+}
+
+game.spawnAffixBurst(
+(this.x+enemy.x)/2,
+(this.y+enemy.y)/2,
+"melee"
+);
+
+game.addLog("武器同士がぶつかった");
+return;
+}
+}
+
+const hits=[];
+for(const enemy of game.enemies){
+if(!enemy.alive||this.attackHitIds.has(enemy.id))continue;
+const check=segmentHit(this.x,this.y,this.swordX,this.swordY,enemy.x,enemy.y,enemy.size/2+8);
+if(check.hit)hits.push({enemy,t:check.t});
+}
+hits.sort((a,b)=>a.t-b.t);
+let stopped=false;
+for(const h of hits){
+const enemy=h.enemy;
+if(!stopped){this.stopSwordBeforeEnemy(swordAngle,len,h.t);stopped=true}
+
+if(enemy.attackTimer>0){
+const clashPower=8;
+enemy.knockback(this.dirX,this.dirY,clashPower);
+this.x-=this.dirX*clashPower*.45;
+this.y-=this.dirY*clashPower*.45;
+enemy.clashFlash=8;
+enemy.attackTimer=Math.max(enemy.attackTimer,6);
+enemy.attackPhase="active";
+this.attackTimer=Math.max(this.attackTimer,6);
+game.spawnAffixBurst(enemy.x,enemy.y,"melee");
+
+break;
+}
+
+let attackPower=CONFIG.swordDamage+spec.damage;
+
+const weaponItem=game.inventory.equipment.weapon;
+
+if(
+weaponItem &&
+weaponItem.locked &&
+(weaponItem.durability??100)<=0
+){
+attackPower=1;
+}
+
+const r=calcDamage(game,attackPower,enemy,"melee");
+enemy.takeDamage(r.damage);
+this.attackHitIds.add(enemy.id);
+enemy.knockback(this.dirX,this.dirY,(spec.knock||2)+stat(game,"attack")*.05);
+applyElementEffects(game,enemy,r.damage,this.dirX,this.dirY);
+applyDrain(game,r.damage);
+game.spawnAffixBurst(enemy.x,enemy.y,r.critical?"crit":"melee");
+game.addLog(`${enemy.name}に${r.damage}${r.critical?" CRIT":""}`);
+if(enemy.alive)break;
+}
+}
+stopSwordBeforeEnemy(angle,len,t){
+const stop=Math.max(0,t-.015);
+this.swordX=this.x+Math.cos(angle)*len*stop;
+this.swordY=this.y+Math.sin(angle)*len*stop;
+}
+takeDamage(amount,game){
+return DamageSystem.damagePlayer(game,this,amount);
+}
+draw(ctx,c){
+const x=c.sx(this.x),y=c.sy(this.y);
+const armor=globalThis.game.inventory.armorSpec();
+const weapon=globalThis.game.inventory.weaponSpec();
+const magic=globalThis.game.inventory.magicSpec();
+
+const weaponItem=globalThis.game.inventory.equipment.weapon;
+
+const headItem=globalThis.game.inventory.equipment.head;
+const headSpec=
+HEAD_TYPES.find(
+h=>h.key===headItem?.kind
+)||HEAD_TYPES[0];
+
+const armItem=globalThis.game.inventory.equipment.arm;
+const armSpec=
+ARM_TYPES.find(
+a=>a.key===armItem?.kind
+)||ARM_TYPES[0];
+
+const legItem=globalThis.game.inventory.equipment.leg;
+const legSpec=
+LEG_TYPES.find(
+l=>l.key===legItem?.kind
+)||LEG_TYPES[0];
+
+const waistItem=globalThis.game.inventory.equipment.waist;
+const waistSpec=
+WAIST_TYPES.find(
+w=>w.key===waistItem?.kind
+)||WAIST_TYPES[0];
+
+this.drawAura(ctx,x,y,globalThis.game.inventory.equippedAffixes());
+
+ctx.fillStyle="rgba(0,0,0,.38)";
+ctx.fillRect(x-13,y+13,26,6);
+
+ctx.globalAlpha=this.invuln>0&&Math.floor(this.invuln/4)%2===0?.45:1;
+
+const armorItem=globalThis.game.inventory.equipment.armor;
+
+ctx.fillStyle=itemRankColor(armorItem)||armor.body;
+ctx.fillRect(x-10,y-8,20,22);
+ctx.fillStyle=itemRankColor(armorItem)||armor.trim;
+ctx.fillRect(x-10,y-8,20,5);
+
+ctx.fillStyle=itemRankColor(waistItem)||waistSpec.color;
+ctx.fillRect(x-11,y+7,22,4);
+
+ctx.fillStyle=itemRankColor(armItem)||armSpec.color;
+ctx.fillRect(x-15,y-6,5,14);
+ctx.fillRect(x+10,y-6,5,14);
+
+ctx.fillStyle="#f0c090";
+ctx.fillRect(x-7,y-20,14,12);
+
+ctx.fillStyle=itemRankColor(headItem)||headSpec.color;
+ctx.fillRect(x-8,y-23,16,5);
+
+ctx.fillStyle=magic.color;
+ctx.fillRect(x+8,y-25,6,9);
+
+ctx.fillStyle="#101010";
+ctx.fillRect(x-5,y-15,2,2);
+ctx.fillRect(x+4,y-15,2,2);
+
+ctx.fillStyle=itemRankColor(legItem)||legSpec.color;
+ctx.fillRect(x-10,y+14,6,8);
+ctx.fillRect(x+4,y+14,6,8);
+
+ctx.globalAlpha=1;
+
+if(this.attackTimer>0||this.clashFlash>0){
+
+if(weapon.key==="hand"){
+const total=Math.max(1,this.attackTotal||10);
+const progress=clamp((total-this.attackTimer)/total,0,1);
+const pulse=1-progress;
+const hx=x+this.dirX*(18+progress*10);
+const hy=y+this.dirY*(18+progress*10);
+const r=8+progress*16;
+
+ctx.save();
+ctx.globalAlpha=Math.max(0.15,pulse);
+ctx.strokeStyle="rgba(240,192,144,.9)";
+ctx.lineWidth=4;
+ctx.beginPath();
+ctx.arc(hx,hy,r,0,Math.PI*2);
+ctx.stroke();
+
+ctx.globalAlpha=Math.max(0.1,pulse*.7);
+ctx.strokeStyle="rgba(255,255,255,.75)";
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.arc(hx,hy,r*.55,0,Math.PI*2);
+ctx.stroke();
+ctx.restore();
+
+}else{
+
+const weaponDurability=weaponItem?.durability??100;
+const dur=clamp(weaponDurability,0,100);
+const damageRate=1-dur/100;
+
+const sx=c.sx(this.swordX);
+const sy=c.sy(this.swordY);
+
+const bend=damageRate*22;
+const dx=sx-x;
+const dy=sy-y;
+const len=Math.max(1,Math.hypot(dx,dy));
+const nx=-dy/len;
+const ny=dx/len;
+
+const midX=(x+sx)/2+nx*bend;
+const midY=(y+sy)/2+ny*bend;
+
+ctx.strokeStyle=itemRankColor(weaponItem)||weapon.color;
+ctx.lineWidth=Math.max(1,PLAYER_ATTACK_SETTING.bladeWidth*(0.35+dur/100*.65));
+ctx.lineCap="round";
+ctx.beginPath();
+ctx.moveTo(x,y);
+ctx.quadraticCurveTo(midX,midY,sx,sy);
+ctx.stroke();
+
+ctx.strokeStyle="#ffffff";
+ctx.lineWidth=Math.max(1,PLAYER_ATTACK_SETTING.bladeWidth/3*(0.35+dur/100*.65));
+ctx.beginPath();
+ctx.moveTo(x,y);
+ctx.quadraticCurveTo(midX,midY,sx,sy);
+ctx.stroke();
+
+}
+}
+
+this.drawHpBar(ctx,x,y);
+}
+drawHpBar(ctx,x,y){
+const w=46,ratio=clamp(this.hp/this.maxHp,0,1);
+ctx.fillStyle="rgba(0,0,0,.55)";
+ctx.fillRect(x-w/2-1,y-39,w+2,8);
+ctx.fillStyle="#f4f4f4";
+ctx.fillRect(x-w/2,y-38,w,6);
+ctx.fillStyle=ratio>.5?"#55e06a":ratio>.22?"#ffd166":"#ff5f6d";
+ctx.fillRect(x-w/2,y-38,w*ratio,6);
+}
+drawAura(ctx,x,y,affixes){
+const a=affixes.slice(0,22);
+if(!a.length)return;
+const t=performance.now()/1000;
+ctx.save();
+for(let i=0;i<a.length;i++){
+const color=AFFIX_VISUALS[a[i].stat]||"#fff";
+const power=a[i].value||1;
+const size=2;
+const radiusBoost=clamp(power*.28,0,60);
+const ang=t*(1.2+i*.07)+i*Math.PI*2/a.length;
+const r=21+(i%4)*5+radiusBoost;
+ctx.globalAlpha=clamp(.25+power*.006+.25*Math.sin(t*3+i),.25,.85);
+ctx.fillStyle=color;
+ctx.beginPath();
+ctx.arc(x+Math.cos(ang)*r,y-3+Math.sin(ang)*r*.65,size,0,Math.PI*2);
+ctx.fill();
+if(power>=45){
+ctx.globalAlpha=.16;
+ctx.strokeStyle=color;
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.arc(x,y-3,r*.7,0,Math.PI*2);
+ctx.stroke();
+}
+}
+ctx.restore();
+}
+}
+class Enemy{
+constructor({x,y,level=1,bossRank=0,type="goblin"}){
+this.id=uid();this.x=x;this.y=y;this.spawnX=x;this.spawnY=y;this.level=level;this.bossRank=bossRank;
+this.type=type;
+this.distanceRate=distanceRateFromVillage(x,y);
+
+const typeData={
+
+goblin:{name:"剣ゴブリン",size:1,hp:1,speed:1,color:"#7a3a32",weapon:"sword"},
+
+daggerGoblin:{
+name:"短剣ゴブリン",
+size:.9,
+hp:.75,
+speed:1.35,
+color:"#5d8f3a",
+weapon:"dagger"
+},
+
+spearman:{
+name:"槍兵",
+size:1,
+hp:1.1,
+speed:.95,
+color:"#4a6fb8",
+weapon:"spear"
+},
+
+greatsword:{
+name:"大剣兵",
+size:1.2,
+hp:1.6,
+speed:.75,
+color:"#8a5d2a",
+weapon:"greatsword"
+},
+
+wolf:{name:"Wolf",size:.85,hp:.75,speed:1.7,color:"#909090"},
+spider:{name:"Spider",size:.9,hp:.08,speed:.8,color:"#7a2ad6"},
+golem:{name:"Golem",size:1.45,hp:2.8,speed:.45,color:"#707070"}
+
+};
+
+this.typeData=typeData[this.type]||typeData.goblin;
+
+this.size=(bossRank?30+bossRank*1.15:22+level*.35)*this.typeData.size;
+const normalHp=Math.round((24+level*8)*this.typeData.hp);
+this.maxHp=bossRank?Math.round(normalHp*10+bossRank*30):normalHp;
+this.hp=this.maxHp;
+this.alive=true;this.hitTimer=0;this.stunTime=0;
+this.poisonTime=0;this.poisonPower=0;this.burnTime=0;this.burnPower=0;
+this.slowTime=0;this.slowPower=0;this.darkTime=0;this.darkPower=0;this.iceStack=0;
+this.attackCooldown=randInt(20,80);
+this.attackTimer=0;
+this.poisonShotCooldown=randInt(70,150);
+this.attackPhase="";
+this.attackDirX=0;
+this.attackDirY=1;
+this.attackHit=false;
+this.name=bossRank
+?`Rank ${bossRank} ${this.typeData.name} Boss`
+:`Lv${level} ${this.typeData.name}`;
+}
+update(game){
+if(!this.alive)return;
+if(this.clashFlash>0)this.clashFlash--;
+this.applyDots();
+if(this.attackCooldown>0)this.attackCooldown--;
+if(this.attackTimer>0)this.updateSwordAttack(game);
+if(this.stunTime>0){this.stunTime--;return}
+
+let target=game.player;
+let targetIsAlly=false;
+let d=dist(this.x,this.y,game.player.x,game.player.y);
+
+if(game.allies){
+for(const a of game.allies){
+if(!a.alive)continue;
+
+const ad=dist(this.x,this.y,a.x,a.y);
+
+if(ad<d){
+d=ad;
+target=a;
+targetIsAlly=true;
+}
+}
+}
+
+const vd=dist(this.x,this.y,VILLAGE.x,VILLAGE.y);
+if(vd<VILLAGE.radius+20){
+const p=Math.max(1,vd);
+this.x+=(this.x-VILLAGE.x)/p*1.4;
+this.y+=(this.y-VILLAGE.y)/p*1.4;
+return;
+}
+
+if(game.camps){
+for(const camp of game.camps){
+const cd=dist(this.x,this.y,camp.x,camp.y);
+
+if(cd<camp.radius+30){
+const p=Math.max(1,cd);
+this.x+=(this.x-camp.x)/p*1.8;
+this.y+=(this.y-camp.y)/p*1.8;
+return;
+}
+}
+}
+
+const enemyWeapon=this.enemyWeaponSpec();
+
+let visionRange=
+this.type==="wolf" ? 260 :
+this.type==="spider" ? 160 :
+this.type==="golem" ? 120 :
+180;
+
+if(this.bossRank)visionRange*=2;
+
+if(this.type==="spider"&&!game.playerInVillage&&this.attackTimer<=0&&!targetIsAlly){
+if(this.poisonShotCooldown>0)this.poisonShotCooldown--;
+
+if(
+d<visionRange &&
+this.poisonShotCooldown<=0
+){
+this.shootPoison(game);
+this.poisonShotCooldown=randInt(100,170);
+return;
+}
+}
+
+if(d>visionRange){
+if(this.hitTimer>0)this.hitTimer--;
+if(this.slowTime>0)this.slowTime--;
+if(this.darkTime>0)this.darkTime--;
+return;
+}
+
+if(!game.playerInVillage&&this.attackTimer<=0&&d<enemyWeapon.range+28&&this.attackCooldown<=0){
+if(targetIsAlly){
+const td=Math.max(1,dist(this.x,this.y,target.x,target.y));
+this.attackDirX=(target.x-this.x)/td;
+this.attackDirY=(target.y-this.y)/td;
+this.attackTimer=enemyWeapon.charge+enemyWeapon.active;
+this.attackPhase="charge";
+this.attackHit=true;
+
+const allyDefense=
+Math.floor((target.armor?.basePower||0)/12)+
+Math.floor((target.head?.basePower||0)/16);
+
+const damage=Math.max(
+1,
+Math.floor(6+this.level*.35+(this.bossRank?this.bossRank*.25:0))-allyDefense
+);
+
+target.maxHp=
+200+
+Math.floor((target.head?.basePower||0)/2)+
+Math.floor((target.armor?.basePower||0)/3);
+
+if(target.hp>target.maxHp){
+target.hp=target.maxHp;
+}
+
+target.hp-=damage;
+if(target.hp<=0){
+target.hp=0;
+target.alive=false;
+
+if(target.weapon){
+game.gameDropAllyItem(target.x,target.y,target.weapon);
+target.weapon=null;
+}
+}
+
+this.attackCooldown=enemyWeapon.cooldown;
+}else{
+this.startSwordAttack(game);
+}
+return;
+}
+
+if(!game.playerInVillage&&d<420&&d>26&&this.attackTimer<=0){
+let s=(CONFIG.enemySpeed+this.bossRank*.006)*this.typeData.speed;
+
+if(this.slowTime>0){
+s*=Math.max(.2,1-this.slowPower);
+}
+
+this.x+=(target.x-this.x)/d*s;
+this.y+=(target.y-this.y)/d*s;
+}
+
+const touchDamage=Math.max(1,Math.floor((4+this.level*.25+(this.bossRank?this.bossRank*.15:0))-game.inventory.defenseBonus()*.12));
+
+if(
+!targetIsAlly &&
+this.type!=="spider" &&
+d<this.size/2+10 &&
+this.attackTimer<=0
+){
+game.player.takeDamage(touchDamage,game);
+}
+
+if(this.hitTimer>0)this.hitTimer--;
+if(this.slowTime>0)this.slowTime--;
+if(this.darkTime>0)this.darkTime--;
+}
+getBossDamageMultiplier(){
+const d=EnemyData.bossDamageMultiplier;
+
+if(this.bossRank>=50)return d[50];
+if(this.bossRank>=40)return d[40];
+if(this.bossRank>=32)return d[32];
+if(this.bossRank>=24)return d[24];
+if(this.bossRank>=16)return d[16];
+if(this.bossRank>=10)return d[10];
+if(this.bossRank>=3)return d[3];
+
+return 1;
+}
+getBossAttackSpeedMultiplier(){
+const d=EnemyData.bossAttackSpeed;
+
+if(this.bossRank>=50)return d[50];
+if(this.bossRank>=40)return d[40];
+if(this.bossRank>=32)return d[32];
+if(this.bossRank>=24)return d[24];
+if(this.bossRank>=16)return d[16];
+if(this.bossRank>=10)return d[10];
+if(this.bossRank>=3)return d[3];
+
+return 1;
+}
+shootPoison(game){
+const d=Math.max(1,dist(this.x,this.y,game.player.x,game.player.y));
+const vx=(game.player.x-this.x)/d*3.1;
+const vy=(game.player.y-this.y)/d*3.1;
+
+game.enemyProjectiles.push(new EnemyProjectile({
+x:this.x,
+y:this.y,
+vx,
+vy,
+type:"poison",
+damage:Math.max(3,Math.floor(4+this.level*.35))
+}));
+
+game.addLog("毒グモが毒液を吐いた");
+}
+
+enemyWeaponSpec(){
+
+if(this.type==="spider"){
+return {
+range:0,
+charge:999999,
+active:0,
+cooldown:999999,
+arc:0,
+damage:0,
+knock:0,
+line:0
+};
+}
+
+const weapon=this.typeData.weapon||"sword";
+
+const data={
+dagger:{range:30,charge:8,active:8,cooldown:45,arc:1.8,damage:.75,knock:3,line:3},
+sword:{range:42,charge:18,active:10,cooldown:80,arc:2.0,damage:1,knock:6,line:5},
+spear:{range:90,charge:24,active:10,cooldown:95,arc:.08,damage:1.05,knock:7,line:4,thrust:true},
+greatsword:{range:58,charge:30,active:16,cooldown:125,arc:2.7,damage:1.45,knock:12,line:8}
+};
+
+return data[weapon]||data.sword;
+}
+
+startSwordAttack(game){
+const d=Math.max(1,dist(this.x,this.y,game.player.x,game.player.y));
+this.attackDirX=(game.player.x-this.x)/d;
+this.attackDirY=(game.player.y-this.y)/d;
+const weapon=this.enemyWeaponSpec();
+
+this.attackTimer=weapon.charge+weapon.active;
+this.attackPhase="charge";
+this.attackHit=false;
+
+let cd=weapon.cooldown+randInt(0,40)-Math.min(30,Math.floor(this.level*.25));
+cd*=this.getBossAttackSpeedMultiplier();
+this.attackCooldown=Math.max(10,Math.floor(cd));
+}
+updateSwordAttack(game){
+this.attackTimer--;
+const weapon=this.enemyWeaponSpec();
+const activeStart=weapon.active;
+if(this.attackTimer<=activeStart)this.attackPhase="active";
+if(this.attackPhase==="active"&&!this.attackHit){
+const len=weapon.range+(this.bossRank?18:0)+Math.min(30,this.level*.28);
+const total=weapon.active;
+const progress=clamp((total-this.attackTimer)/total,0,1);
+
+const baseAngle=Math.atan2(this.attackDirY,this.attackDirX);
+
+let swordAngle=baseAngle;
+let attackLen=len;
+
+if(weapon.thrust){
+if(progress<0.4){
+attackLen=len*(0.4-progress);
+}else{
+attackLen=len*((progress-0.4)/0.6);
+}
+attackLen=Math.max(10,attackLen);
+}else{
+const arc=this.bossRank?2.4:weapon.arc;
+swordAngle=baseAngle-arc/2+progress*arc;
+}
+
+const ax=this.x;
+const ay=this.y;
+const bx=this.x+Math.cos(swordAngle)*attackLen;
+const by=this.y+Math.sin(swordAngle)*attackLen;
+
+const check=segmentHit(ax,ay,bx,by,game.player.x,game.player.y,game.player.size/2+12);
+if(check.hit){
+const bossPower=this.bossRank?Math.floor(this.bossRank*.65):0;
+let dmg=Math.max(2,(10+this.level+bossPower)*weapon.damage-game.inventory.defenseBonus());
+dmg=Math.floor(dmg*this.getBossDamageMultiplier());
+game.player.takeDamage(dmg,game);
+this.attackHit=true;
+game.addLog(this.bossRank?"BOSSの剣攻撃を受けた":"敵の剣攻撃を受けた");
+}
+}
+if(this.attackTimer<=0)this.attackPhase="";
+}
+applyDots(){
+if(this.poisonTime>0){this.poisonTime--;this.takeDamage(this.poisonPower*(this.bossRank?.01:.02))}
+if(this.burnTime>0){this.burnTime--;this.takeDamage(this.burnPower*.03)}
+if(this.darkTime>0){this.takeDamage(this.darkPower*.018)}
+}
+takeDamage(amount){
+return DamageSystem.damageEnemy(this,amount);
+}
+knockback(dx,dy,power){
+const resist=this.bossRank?0.35:1;
+this.x+=dx*power*resist;
+this.y+=dy*power*resist;
+}
+reviveAtSpawn(){
+this.x=this.spawnX;this.y=this.spawnY;this.hp=this.maxHp;this.alive=true;this.dropped=false;this.hitTimer=0;this.stunTime=0;this.poisonTime=0;this.burnTime=0;this.slowTime=0;this.darkTime=0;this.iceStack=0;this.attackTimer=0;this.attackCooldown=randInt(20,80);this.attackHit=false;
+}
+draw(ctx,c){
+if(!this.alive)return;
+const x=c.sx(this.x),y=c.sy(this.y),s=this.size;
+const levelTone=clamp(this.level/70,0,1);
+ctx.fillStyle=this.stunTime>0
+?"#fff366"
+:this.hitTimer>0
+?"#ff7a7a"
+:this.bossRank
+?"#682a92"
+:this.typeData.color;
+ctx.fillRect(x-s/2,y-s/2,s,s);
+if(this.attackTimer>0||this.clashFlash>0){
+if(this.attackPhase==="active"){
+const weapon=this.enemyWeaponSpec();
+const len=weapon.range+(this.bossRank?18:0)+Math.min(30,this.level*.28);
+const total=weapon.active;
+const progress=clamp((total-this.attackTimer)/total,0,1);
+
+const baseAngle=Math.atan2(this.attackDirY,this.attackDirX);
+const arc=this.bossRank?Math.max(weapon.arc,2.4):weapon.arc;
+const swordAngle=baseAngle-arc/2+progress*arc;
+
+let drawLen=len;
+
+if(weapon.thrust){
+if(progress<0.4){
+drawLen=len*(0.4-progress);
+}else{
+drawLen=len*((progress-0.4)/0.6);
+}
+drawLen=Math.max(12,drawLen);
+}
+
+const bx=x+Math.cos(swordAngle)*drawLen;
+const by=y+Math.sin(swordAngle)*drawLen;
+
+ctx.lineCap="round";
+ctx.strokeStyle="#ffead1";
+ctx.lineWidth=weapon.line;
+ctx.beginPath();
+ctx.moveTo(x,y);
+ctx.lineTo(bx,by);
+ctx.stroke();
+}
+
+if(this.attackPhase==="charge"){
+ctx.strokeStyle="rgba(255,80,80,.35)";
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.arc(x,y,s*.75+Math.sin(performance.now()/80)*2,0,Math.PI*2);
+ctx.stroke();
+}
+}
+if(this.bossRank){
+ctx.strokeStyle="#ffd166";
+ctx.lineWidth=3;
+ctx.strokeRect(x-s/2-3,y-s/2-3,s+6,s+6);
+ctx.strokeStyle="rgba(255,209,102,.35)";
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.arc(x,y,s*.8+Math.sin(performance.now()/180)*3,0,Math.PI*2);
+ctx.stroke();
+if(this.bossRank>=24){
+ctx.strokeStyle="rgba(255,255,255,.24)";
+ctx.beginPath();
+ctx.arc(x,y,s*1.05+Math.sin(performance.now()/120)*5,0,Math.PI*2);
+ctx.stroke();
+}
+}
+if(this.poisonTime>0){ctx.strokeStyle="#b15cff";ctx.strokeRect(x-s/2-5,y-s/2-5,s+10,s+10)}
+if(this.burnTime>0){ctx.strokeStyle="#ff6a00";ctx.strokeRect(x-s/2-8,y-s/2-8,s+16,s+16)}
+if(this.slowTime>0){ctx.strokeStyle="#9ee7ff";ctx.strokeRect(x-s/2-11,y-s/2-11,s+22,s+22)}
+if(this.darkTime>0){ctx.strokeStyle="#4b2a7f";ctx.strokeRect(x-s/2-14,y-s/2-14,s+28,s+28)}
+ctx.fillStyle="#090909";
+ctx.fillRect(x-6,y-5,3,3);
+ctx.fillRect(x+4,y-5,3,3);
+ctx.fillStyle="#101010";
+ctx.fillRect(x-12,y+6,24,3);
+ctx.fillStyle="rgba(255,255,255,.85)";
+ctx.fillRect(x-18,y-s/2-10,36,5);
+ctx.fillStyle=this.bossRank?"#ffd166":"#55e06a";
+ctx.fillRect(x-18,y-s/2-10,36*(this.hp/this.maxHp),5);
+}
+}
+class EnemyProjectile{
+constructor({x,y,vx,vy,type="poison",damage=5}){
+this.x=x;
+this.y=y;
+this.vx=vx;
+this.vy=vy;
+this.type=type;
+this.damage=damage;
+this.life=100;
+this.size=7;
+}
+
+update(game){
+this.x+=this.vx;
+this.y+=this.vy;
+this.life--;
+
+if(dist(this.x,this.y,game.player.x,game.player.y)<game.player.size/2+this.size){
+game.player.takeDamage(this.damage,game);
+
+if(this.type==="poison"){
+game.player.poisonTime=Math.max(game.player.poisonTime||0,180);
+game.player.poisonPower=Math.max(game.player.poisonPower||0,2);
+game.addLog("毒を受けた");
+}
+
+this.life=0;
+}
+}
+
+draw(ctx,c){
+const x=c.sx(this.x);
+const y=c.sy(this.y);
+
+ctx.fillStyle=this.type==="poison"?"#b15cff":"#ffffff";
+ctx.beginPath();
+ctx.arc(x,y,this.size,0,Math.PI*2);
+ctx.fill();
+
+ctx.fillStyle="#62ff7d";
+ctx.beginPath();
+ctx.arc(x,y,3,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+class Projectile{
+constructor(x,y,vx,vy,magic){
+this.x=x;this.y=y;this.vx=vx;this.vy=vy;this.life=70;this.magic=magic;
+}
+update(game){
+const wind=stat(game,"wind");
+this.x+=this.vx*(1+wind*.01);
+this.y+=this.vy*(1+wind*.01);
+this.life--;
+for(const enemy of game.enemies){
+if(!enemy.alive)continue;
+if(dist(this.x,this.y,enemy.x,enemy.y)<enemy.size/2+8){
+const m=this.magic;
+const base=Math.floor(CONFIG.fireDamage*m.damageRate+game.inventory.magicBonus());
+const r=calcDamage(game,base,enemy,m.key);
+enemy.takeDamage(r.damage);
+if(m.key==="fire")applyBurn(enemy,stat(game,"fire")+stat(game,"magicPower"));
+if(m.key==="thunder")applyThunder(game,enemy,stat(game,"thunder")+stat(game,"magicPower"),1.35);
+if(m.key==="poison")applyPoison(enemy,stat(game,"poison")+stat(game,"magicPower"),1.8);
+applyIce(enemy,stat(game,"ice"));
+applyDark(game,enemy,stat(game,"dark"),r.damage);
+applyLight(game,enemy,stat(game,"light"),r.damage);
+applyDrain(game,r.damage);
+this.life=0;
+game.spawnAffixBurst(enemy.x,enemy.y,r.critical?"crit":"magic");
+game.addLog(`${enemy.name}に${m.label}${r.damage}${r.critical?" CRIT":""}`);
+break;
+}
+}
+}
+draw(ctx,c){
+const x=c.sx(this.x),y=c.sy(this.y),m=this.magic;
+ctx.fillStyle=m.color;
+ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.fill();
+ctx.fillStyle=m.inner;
+ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();
+}
+}
+class VisualEffect{
+constructor(x,y,affix,mode){
+this.x=x;this.y=y;this.color=AFFIX_VISUALS[affix.stat]||"#fff";this.life=mode==="crit"?34:24;this.maxLife=this.life;this.p=[];
+const count=mode==="crit"?24:10;
+for(let i=0;i<count;i++){
+const a=rand(0,Math.PI*2),pow=rand(.6,3.2);
+this.p.push({x:x+rand(-8,8),y:y+rand(-8,8),vx:Math.cos(a)*pow,vy:Math.sin(a)*pow-rand(.1,1.2),r:rand(2,6)});
+}
+}
+update(){this.life--;for(const p of this.p){p.x+=p.vx;p.y+=p.vy;p.vx*=.94;p.vy*=.94}return this.life>0}
+draw(ctx,c){
+ctx.save();
+ctx.globalAlpha=clamp(this.life/this.maxLife,0,1);
+ctx.fillStyle=this.color;
+for(const p of this.p){ctx.beginPath();ctx.arc(c.sx(p.x),c.sy(p.y),p.r,0,Math.PI*2);ctx.fill()}
+ctx.restore();
+}
+}
+class LootDrop{
+constructor(x,y,item){this.x=x;this.y=y;this.item=item;this.pulse=Math.random()*Math.PI*2}
+update(game){
+this.pulse+=.08;
+if(dist(this.x,this.y,game.player.x,game.player.y)<CONFIG.pickupRange){
+game.inventory.add(this.item);
+game.addLog(`入手:${this.item.displayName||this.item.name}`);
+game.ui.showDropToast(this.item);
+game.ui.refreshInventory();
+return false;
+}
+return true;
+}
+draw(ctx,c){
+const x=c.sx(this.x);
+const y=c.sy(this.y)+Math.sin(this.pulse)*3;
+const item=this.item;
+const n=item.affixes.length;
+
+const colors=[
+"#888888",
+"#44cc66",
+"#3399ff",
+"#ff4444",
+"#ffffff",
+"#ff9900",
+"#ff66cc",
+"#050505"
+];
+
+let color=colors[Math.max(0,Math.min(7,n-1))];
+
+if(n>=10){
+const rainbow=[
+"#ff4444",
+"#ff9900",
+"#ffff55",
+"#44cc66",
+"#3399ff",
+"#aa66ff",
+"#ff66cc"
+];
+color=rainbow[Math.floor(performance.now()/90)%rainbow.length];
+}
+
+ctx.save();
+ctx.fillStyle=color;
+ctx.strokeStyle="#111";
+ctx.lineWidth=2;
+
+if(item.type==="weapon"){
+ctx.beginPath();
+ctx.moveTo(x-10,y+8);
+ctx.lineTo(x+12,y);
+ctx.lineTo(x-10,y-8);
+ctx.closePath();
+ctx.fill();
+ctx.stroke();
+}
+
+else if(item.type==="armor"){
+ctx.fillRect(x-10,y-10,20,20);
+ctx.strokeRect(x-10,y-10,20,20);
+}
+
+else if(item.type==="magic"){
+ctx.fillRect(x-9,y-11,18,22);
+ctx.strokeRect(x-9,y-11,18,22);
+ctx.fillStyle="#111";
+ctx.fillRect(x-4,y-7,8,14);
+}
+
+else if(item.type==="head"){
+ctx.beginPath();
+ctx.moveTo(x,y-12);
+ctx.lineTo(x+11,y+9);
+ctx.lineTo(x-11,y+9);
+ctx.closePath();
+ctx.fill();
+ctx.stroke();
+}
+
+else if(item.type==="arm"){
+ctx.fillRect(x-14,y-5,10,10);
+ctx.fillRect(x+4,y-5,10,10);
+ctx.strokeRect(x-14,y-5,10,10);
+ctx.strokeRect(x+4,y-5,10,10);
+}
+
+else if(item.type==="waist"){
+ctx.fillRect(x-14,y-4,28,8);
+ctx.strokeRect(x-14,y-4,28,8);
+}
+
+else if(item.type==="leg"){
+ctx.beginPath();
+ctx.arc(x,y,11,Math.PI,0);
+ctx.lineTo(x+7,y+9);
+ctx.lineTo(x-7,y+9);
+ctx.closePath();
+ctx.fill();
+ctx.stroke();
+}
+
+else if(item.type==="neck"){
+ctx.beginPath();
+ctx.moveTo(x,y-12);
+ctx.lineTo(x+11,y);
+ctx.lineTo(x,y+12);
+ctx.lineTo(x-11,y);
+ctx.closePath();
+ctx.fill();
+ctx.stroke();
+}
+
+else if(item.type==="ring"){
+ctx.beginPath();
+ctx.arc(x,y,11,0,Math.PI*2);
+ctx.strokeStyle=color;
+ctx.lineWidth=4;
+ctx.stroke();
+ctx.strokeStyle="#111";
+ctx.lineWidth=1;
+ctx.stroke();
+}
+
+else if(item.type==="bracelet"){
+ctx.beginPath();
+ctx.arc(x,y,12,0,Math.PI*2);
+ctx.strokeStyle=color;
+ctx.lineWidth=4;
+ctx.stroke();
+ctx.beginPath();
+ctx.arc(x,y,6,0,Math.PI*2);
+ctx.stroke();
+ctx.strokeStyle="#111";
+ctx.lineWidth=1;
+ctx.stroke();
+}
+
+else{
+ctx.beginPath();
+ctx.arc(x,y,9,0,Math.PI*2);
+ctx.fill();
+ctx.stroke();
+}
+
+ctx.restore();
+}
+}
+class World{
+constructor(){
+this.trees=makeVisualTrees();
+}
+
+draw(ctx,c){
+ctx.fillStyle="#000000";
+ctx.fillRect(0,0,CONFIG.viewW,CONFIG.viewH);
+
+const mapX=c.sx(0);
+const mapY=c.sy(0);
+const mapW=CONFIG.worldW*c.zoom;
+const mapH=CONFIG.worldH*c.zoom;
+
+const area=globalThis.game
+?AreaData.byLocation(globalThis.game.player.x,globalThis.game.player.y)
+:AreaData.zones[0];
+
+const groundColors={
+village:"#2f4a2f",
+field:"#2f5a35",
+forest:"#1f4a2c",
+deepForest:"#17351f",
+poison:"#2f2445",
+rock:"#45413a",
+deep:"#181820"
+};
+
+ctx.fillStyle=groundColors[area.key]||"#203820";
+ctx.fillRect(mapX,mapY,mapW,mapH);
+
+this.drawGroundNoise(ctx);
+this.drawAreaGroundEffects(ctx,c,area);
+
+this.drawVillage(ctx,c);
+
+for(const t of this.trees){
+this.drawTree(ctx,c,t,area);
+}
+
+this.drawAreaFrontEffects(ctx,c,area);
+}
+
+drawAreaGroundEffects(ctx,c,area){
+if(!area)return;
+
+if(area.key==="forest"||area.key==="deepForest"){
+this.drawForestShade(ctx,area.key==="deepForest"?0.18:0.08);
+}
+
+if(area.key==="poison"){
+this.drawPoisonMist(ctx);
+}
+
+if(area.key==="rock"){
+this.drawRocks(ctx,c);
+}
+
+if(area.key==="deep"){
+this.drawDeepFog(ctx);
+}
+}
+
+drawAreaFrontEffects(ctx,c,area){
+if(!area)return;
+
+if(area.key==="deepForest"){
+this.drawForestShade(ctx,0.16);
+}
+
+if(area.key==="poison"){
+this.drawPoisonMistFront(ctx);
+}
+
+if(area.key==="deep"){
+this.drawDeepRedFog(ctx);
+}
+}
+
+drawForestShade(ctx,alpha){
+ctx.fillStyle=`rgba(0,0,0,${alpha})`;
+ctx.fillRect(0,0,CONFIG.viewW,CONFIG.viewH);
+}
+
+drawPoisonMist(ctx){
+const t=performance.now()*0.001;
+
+for(let i=0;i<18;i++){
+const x=(i*91+t*24)%CONFIG.viewW;
+const y=(i*47+Math.sin(t+i)*18)%CONFIG.viewH;
+
+ctx.fillStyle="rgba(160,80,220,.08)";
+ctx.beginPath();
+ctx.arc(x,y,45+Math.sin(t+i)*12,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+drawPoisonMistFront(ctx){
+const t=performance.now()*0.001;
+
+for(let i=0;i<9;i++){
+const x=(i*137-t*18)%CONFIG.viewW;
+const y=(i*73+Math.cos(t+i)*14)%CONFIG.viewH;
+
+ctx.fillStyle="rgba(190,120,255,.10)";
+ctx.beginPath();
+ctx.arc(x,y,28+Math.sin(t*2+i)*8,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+drawRocks(ctx,c){
+for(let i=0;i<36;i++){
+const wx=(i*421)%CONFIG.worldW;
+const wy=(i*283)%CONFIG.worldH;
+const x=c.sx(wx);
+const y=c.sy(wy);
+
+if(x<-40||x>CONFIG.viewW+40||y<-40||y>CONFIG.viewH+40)continue;
+
+const s=8+(i%5)*3;
+
+ctx.fillStyle="#55514b";
+ctx.beginPath();
+ctx.moveTo(x-s,y+s);
+ctx.lineTo(x-s*.3,y-s);
+ctx.lineTo(x+s,y-s*.4);
+ctx.lineTo(x+s*.8,y+s*.8);
+ctx.closePath();
+ctx.fill();
+
+ctx.strokeStyle="rgba(0,0,0,.35)";
+ctx.stroke();
+}
+}
+
+drawDeepFog(ctx){
+const t=performance.now()*0.001;
+
+ctx.fillStyle="rgba(0,0,0,.22)";
+ctx.fillRect(0,0,CONFIG.viewW,CONFIG.viewH);
+
+for(let i=0;i<12;i++){
+const x=(i*101+t*11)%CONFIG.viewW;
+const y=(i*67+Math.sin(t+i)*16)%CONFIG.viewH;
+
+ctx.fillStyle="rgba(80,20,30,.10)";
+ctx.beginPath();
+ctx.arc(x,y,60+Math.sin(t+i)*20,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+drawDeepRedFog(ctx){
+const t=performance.now()*0.001;
+
+for(let i=0;i<8;i++){
+const x=(i*149-t*20)%CONFIG.viewW;
+const y=(i*91+Math.cos(t+i)*20)%CONFIG.viewH;
+
+ctx.fillStyle="rgba(180,35,45,.12)";
+ctx.beginPath();
+ctx.arc(x,y,42+Math.sin(t*1.4+i)*14,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+drawGroundNoise(ctx){
+ctx.fillStyle="rgba(255,255,255,.025)";
+for(let i=0;i<28;i++){
+const x=(i*97+performance.now()*0)%CONFIG.viewW;
+const y=(i*53)%CONFIG.viewH;
+ctx.fillRect(x,y,2,2);
+}
+}
+
+drawVillage(ctx,c){
+const x=c.sx(VILLAGE.x),y=c.sy(VILLAGE.y),r=VILLAGE.radius;
+ctx.fillStyle="rgba(176,145,88,.55)";
+ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+ctx.strokeStyle="rgba(255,232,166,.38)";
+ctx.beginPath();ctx.arc(x,y,r*.93,0,Math.PI*2);ctx.stroke();
+for(const h of VILLAGE.houses)this.drawHouse(ctx,c,h);
+for(const n of VILLAGE.npcs)this.drawNpc(ctx,c,n);
+ctx.fillStyle="#fff4c7";
+ctx.font="12px monospace";
+ctx.textAlign="center";
+ctx.fillText(VILLAGE.name,x,y-r*.78);
+ctx.textAlign="left";
+}
+
+drawHouse(ctx,c,h){
+const x=c.sx(h.x),y=c.sy(h.y);
+ctx.fillStyle=h.wall;
+ctx.fillRect(x-h.w/2,y-h.h/2,h.w,h.h);
+ctx.fillStyle=h.roof;
+ctx.beginPath();
+ctx.moveTo(x-h.w/2-8,y-h.h/2+4);
+ctx.lineTo(x,y-h.h/2-32);
+ctx.lineTo(x+h.w/2+8,y-h.h/2+4);
+ctx.closePath();ctx.fill();
+ctx.fillStyle="#442915";
+ctx.fillRect(x-9,y+h.h/2-25,18,25);
+}
+
+drawNpc(ctx,c,n){
+const x=c.sx(n.x),y=c.sy(n.y);
+
+ctx.fillStyle=n.color;
+ctx.fillRect(x-6,y-5,12,16);
+
+ctx.fillStyle="#f0c090";
+ctx.fillRect(x-5,y-14,10,9);
+
+ctx.fillStyle="#fff";
+ctx.font="10px monospace";
+ctx.textAlign="center";
+ctx.fillText(n.label,x,y-20);
+
+const game=globalThis.game;
+
+if(
+game &&
+dist(game.player.x,game.player.y,n.x,n.y)<60
+){
+
+let msg="こんにちは";
+
+if(n.label==="Inn"){
+msg="薬草売ってるよ！";
+}
+
+if(n.label==="Shop"){
+msg="素材買取るよ！";
+}
+
+if(n.label==="Smith"){
+msg="鍛冶屋だよ！";
+}
+
+ctx.font="11px monospace";
+
+const w=Math.max(90,msg.length*14);
+
+ctx.fillStyle="rgba(0,0,0,.75)";
+ctx.fillRect(
+x-w/2,
+y-52,
+w,
+18
+);
+
+ctx.strokeStyle="#ffffff";
+ctx.strokeRect(
+x-w/2,
+y-52,
+w,
+18
+);
+
+ctx.fillStyle="#fff4c7";
+ctx.fillText(
+msg,
+x,
+y-40
+);
+}
+
+ctx.textAlign="left";
+}
+
+drawTree(ctx,c,t,area){
+
+if(dist(t.x,t.y,VILLAGE.x,VILLAGE.y)<VILLAGE.radius-20){
+return;
+}
+
+const x=c.sx(t.x),y=c.sy(t.y);
+if(x<-50||x>CONFIG.viewW+50||y<-70||y>CONFIG.viewH+70)return;
+
+const s=t.scale||1;
+
+ctx.fillStyle="#4b2a14";
+ctx.fillRect(x-5*s,y,10*s,20*s);
+
+let leafA=t.tone>.5?"#1b7c3c":"#157336";
+let leafB=t.tone>.5?"#2aa050":"#1d9145";
+
+if(area&&area.key==="deepForest"){
+leafA="#0f3a22";
+leafB="#14502b";
+}
+
+if(area&&area.key==="poison"){
+leafA="#3b2555";
+leafB="#57307a";
+}
+
+if(area&&area.key==="deep"){
+leafA="#161820";
+leafB="#24202a";
+}
+
+ctx.fillStyle=leafA;
+ctx.fillRect(x-18*s,y-22*s,36*s,26*s);
+
+ctx.fillStyle=leafB;
+ctx.fillRect(x-12*s,y-34*s,24*s,20*s);
+}
+}
+class UI{
+constructor(game){
+this.game=game;
+this.hud=document.getElementById("hud");
+this.log=document.getElementById("log");
+this.menu=document.getElementById("menuPanel");
+this.equipped=document.getElementById("equipped");
+this.inventory=document.getElementById("inventory");
+this.playerStatus=document.getElementById("playerStatus");
+this.dropToast=document.getElementById("dropToast");
+this.confirm=document.getElementById("confirmPanel");
+this.testPanel=document.getElementById("testPanel");
+this.toastTimer=0;
+
+this.inventoryMode="items";
+
+this.bindMenuButtons();
+}
+bindMenuButtons(){
+document.getElementById("saveBtn").addEventListener("click",()=>this.game.manualSave());
+document.getElementById("loadBtn").addEventListener("click",()=>this.game.loadGame());
+
+// 薬草購入はInnで行う
+
+document.getElementById("useHerbBtn").addEventListener("click",()=>{
+ShopSystem.useHerb(this.game);
+});
+
+document.getElementById("closeMenuBtn").addEventListener("click",()=>{this.game.menuOpen=false;this.update()});
+document.getElementById("restartBtn").addEventListener("click",()=>this.openConfirm());
+document.getElementById("restartYesBtn").addEventListener("click",()=>{this.closeConfirm();this.game.restartGame()});
+document.getElementById("restartNoBtn").addEventListener("click",()=>this.closeConfirm());
+document.getElementById("testBtn").addEventListener("click",()=>this.openTest());
+document.getElementById("testCloseBtn").addEventListener("click",()=>this.closeTest());
+
+document.getElementById("rangeViewBtn").addEventListener("click",()=>{
+this.game.testRangeView=!this.game.testRangeView;
+document.getElementById("rangeViewBtn").textContent=this.game.testRangeView?"攻撃範囲表示 ON":"攻撃範囲表示 OFF";
+});
+
+document.getElementById("guideVillageBtn").addEventListener("click",()=>{
+this.game.guideVillage=!this.game.guideVillage;
+document.getElementById("guideVillageBtn").textContent=this.game.guideVillage?"村案内 ON":"村案内 OFF";
+});
+
+document.getElementById("guideCampBtn").addEventListener("click",()=>{
+this.game.guideCamp=!this.game.guideCamp;
+document.getElementById("guideCampBtn").textContent=this.game.guideCamp?"キャンプ案内 ON":"キャンプ案内 OFF";
+});
+}
+openConfirm(){this.confirm.classList.add("open")}
+closeConfirm(){this.confirm.classList.remove("open")}
+openTest(){this.testPanel.classList.add("open")}
+closeTest(){this.testPanel.classList.remove("open")}
+update(){
+const g=this.game;
+LogSystem.render(g);
+this.menu.classList.toggle("open",g.menuOpen);
+
+const herbBtn=document.getElementById("quickHerbBtn");
+if(herbBtn){
+herbBtn.style.display=(g.player.herb||0)>0&&!g.menuOpen?"block":"none";
+herbBtn.textContent=`薬草 ${g.player.herb||0}`;
+}
+if(this.toastTimer>0){this.toastTimer--;if(this.toastTimer===0)this.dropToast.classList.remove("show")}
+}
+showDropToast(item){
+return;
+}
+
+refreshPlayerStatus(){
+if(!this.playerStatus)return;
+this.playerStatus.innerHTML=StatusSystem.playerHtml(this.game);
+StatusSystem.bindPageButtons(this.game);
+}
+refreshInventory(){
+InventorySystem.render(this.game);
+}
+renderGroup(label,type){
+return InventorySystem.renderGroup(this.game,label,type);
+}
+bindInventoryClicks(){
+EquipmentSystem.bindInventoryClicks(this.game);
+}
+renderItem(item,clickable){
+return InventorySystem.renderItem(this.game,item,clickable);
+}
+}
+
+const StatusSystem={
+
+area(game){
+const p=game.player;
+return game.currentArea||AreaData.byLocation(p.x,p.y);
+},
+
+basicLine(game){
+const p=game.player;
+const area=this.area(game);
+return `HP ${Math.floor(p.hp)} / ${Math.floor(p.maxHp)}　G ${p.gold||0}　薬草 ${p.herb||0}　エリア:${area.name}`;
+},
+
+powerLine(game){
+return `攻撃 ${game.inventory.attackBonus()}　防御 ${game.inventory.defenseBonus()}　魔力 ${game.inventory.magicBonus()}`;
+},
+
+statLine1(game){
+return `疾風 ${stat(game,"speed")}　会心 ${stat(game,"crit")}　幸運 ${stat(game,"luck")}`;
+},
+
+statLine2(game){
+return `炎 ${stat(game,"fire")}　雷 ${stat(game,"thunder")}　毒 ${stat(game,"poison")}　吸収 ${stat(game,"drain")}`;
+},
+
+playerHtml(game){
+if(!game||!game.player)return "";
+
+return `<div style="display:grid;grid-template-columns:1fr 72px;gap:8px;align-items:start;">
+<div>
+<strong>PLAYER</strong><br>
+${this.basicLine(game)}<br>
+${this.powerLine(game)}<br>
+${this.statLine1(game)}<br>
+${this.statLine2(game)}
+</div>
+<div style="display:grid;gap:5px;">
+<button id="itemPageBtn" style="height:28px;font-size:11px;padding:0;">アイテム</button>
+<button id="materialPageBtn" style="height:28px;font-size:11px;padding:0;">素材</button>
+</div>
+</div>`;
+},
+
+bindPageButtons(game){
+if(!game||!game.ui)return;
+const ui=game.ui;
+const itemBtn=document.getElementById("itemPageBtn");
+const materialBtn=document.getElementById("materialPageBtn");
+
+if(itemBtn){
+itemBtn.onclick=()=>{
+ui.inventoryMode="items";
+ui.refreshInventory();
+};
+}
+
+if(materialBtn){
+materialBtn.onclick=()=>{
+ui.inventoryMode="materials";
+ui.refreshInventory();
+};
+}
+}
+
+};
+
+
+const InventorySystem={
+
+types(){
+return [
+"weapon",
+"armor",
+"magic",
+"head",
+"arm",
+"waist",
+"leg",
+"neck",
+"ring",
+"bracelet"
+];
+},
+
+materials(game){
+return game.player.materials||{
+"鉄くず":0,
+"毛皮":0,
+"糸":0,
+"石材":0
+};
+},
+
+materialPrice(name){
+return {
+"鉄くず":2,
+"毛皮":3,
+"糸":3,
+"石材":4
+}[name]||1;
+},
+
+sortedItems(game,type){
+return game.inventory.itemsByType(type).slice().sort((a,b)=>scoreItem(b)-scoreItem(a));
+},
+
+render(game){
+if(!game||!game.ui)return;
+const ui=game.ui;
+
+ui.refreshPlayerStatus();
+EquipmentSystem.renderEquipped(game);
+
+if(game.nearInn){
+this.renderInn(game);
+return;
+}
+
+if(ui.inventoryMode==="materials"){
+this.renderMaterials(game);
+return;
+}
+
+this.renderItems(game);
+},
+
+renderInn(game){
+const ui=game.ui;
+ui.inventory.innerHTML=ShopSystem.innHtml(game);
+ShopSystem.bindInnButtons(game);
+},
+
+renderMaterials(game){
+const ui=game.ui;
+const materials=this.materials(game);
+
+ui.inventory.innerHTML=
+`<div class="invGroup">
+<div class="invGroupTitle">素材 ${game.nearShop?"Shop売却可":"Shopで売却"}</div>
+${Object.keys(materials).map(name=>{
+const count=materials[name]||0;
+const price=this.materialPrice(name);
+
+return `<div class="item-row">
+<strong>${name}</strong>
+${count}個 / 売値 ${price}G
+${game.nearShop&&count>0?`<button data-sell-material="${name}" style="margin-top:5px;width:100%;height:28px;font-size:11px;">売る +${price}G</button>`:""}
+</div>`;
+}).join("")}
+</div>`;
+
+this.bindMaterialButtons(game);
+},
+
+bindMaterialButtons(game){
+ShopSystem.bindMaterialButtons(game);
+},
+
+renderItems(game){
+const ui=game.ui;
+
+ui.inventory.innerHTML=this.types()
+.map(type=>`<div data-group-type="${type}">${this.renderGroup(game,EquipmentData.label(type),type)}</div>`)
+.join("");
+
+EquipmentSystem.bindInventoryClicks(game);
+EquipmentSystem.bindEquippedJump(game);
+},
+
+renderGroup(game,label,type){
+const inv=game.inventory;
+const limit=inv.limit(type);
+const list=this.sortedItems(game,type);
+let html=`<div class="invGroup"><div class="invGroupTitle">${label} ${list.length}/${limit}</div>`;
+
+for(let i=0;i<limit;i++){
+if(list[i])html+=this.renderItem(game,list[i],true);
+else html+=`<div class="item-row empty">${label}${i+1} 空き</div>`;
+}
+
+html+="</div>";
+return html;
+},
+
+itemBaseLabel(item){
+return item.type==="weapon"?"攻撃":
+item.type==="armor"?"防御":
+item.type==="magic"?"魔力":
+item.type==="head"?"頭防御":
+"能力";
+},
+
+itemKindLabel(item){
+if(item.type==="weapon")return WEAPON_TYPES.find(w=>w.key===item.kind)?.label||"Weapon";
+if(item.type==="armor")return ARMOR_TYPES.find(a=>a.key===item.kind)?.label||"Body";
+if(item.type==="magic")return MAGIC_TYPES.find(m=>m.key===item.kind)?.label||"Magic";
+if(item.type==="head")return HEAD_TYPES.find(h=>h.key===item.kind)?.label||"Head";
+if(item.type==="arm")return ARM_TYPES.find(a=>a.key===item.kind)?.label||"Arm";
+if(item.type==="waist")return WAIST_TYPES.find(w=>w.key===item.kind)?.label||"Waist";
+if(item.type==="leg")return LEG_TYPES.find(l=>l.key===item.kind)?.label||"Leg";
+if(item.type==="neck")return NECK_TYPES.find(n=>n.key===item.kind)?.label||"Neck";
+if(item.type==="ring")return RING_TYPES.find(r=>r.key===item.kind)?.label||"Ring";
+if(item.type==="bracelet")return BRACELET_TYPES.find(b=>b.key===item.kind)?.label||"Bracelet";
+return "Item";
+},
+
+rankColor(item){
+const colors=[
+"#888888",
+"#44cc66",
+"#3399ff",
+"#ff4444",
+"#ffffff",
+"#ff9900",
+"#ff66cc",
+"#050505"
+];
+
+let color=colors[Math.max(0,Math.min(7,item.affixes.length-1))];
+
+if(item.affixes.length>=10){
+const rainbow=[
+"#ff4444",
+"#ff9900",
+"#ffff55",
+"#44cc66",
+"#3399ff",
+"#aa66ff",
+"#ff66cc"
+];
+color=rainbow[Math.floor(performance.now()/90)%rainbow.length];
+}
+
+return color;
+},
+
+renderItem(game,item,clickable){
+const base=this.itemBaseLabel(item);
+const aff=item.affixes.length?item.affixes.map(a=>`${a.name}+${a.value}`).join(" / "):"付属能力なし";
+const chips=item.affixes.map(a=>`<span style="display:inline-block;width:8px;height:8px;margin-right:3px;border-radius:50%;background:${AFFIX_VISUALS[a.stat]||"#fff"}"></span>`).join("");
+const kind=this.itemKindLabel(item);
+
+const cls=["item-row"];
+if(clickable)cls.push("clickable");
+if(game.inventory.isEquipped(item))cls.push("equipped");
+
+const data=clickable?` data-item-id="${item.id}"`:"";
+
+if(item.type==="weapon"&&item.durability==null){
+item.durability=100;
+}
+
+const durability=item.type==="weapon"
+?item.durability
+:100;
+
+const durRate=Math.max(0,Math.min(100,durability));
+
+const lockHtml=item.type==="weapon"
+?`<button class="itemLockBtn ${item.locked?"locked":""}" data-lock-id="${item.id}">
+${item.locked?"LOCK":"🔓"}
+</button>
+<div class="durCircle" style="background:conic-gradient(#2ee66b 0% ${durRate}%, #d62828 ${durRate}% 100%);">
+<div class="durInner"></div>
+</div>`
+:"";
+
+return`
+<div class="${cls.join(" ")}"${data} style="border-left:4px solid ${this.rankColor(item)};position:relative;padding-right:${item.type==="weapon"?"42px":"7px"}">
+<strong>${chips}${item.displayName||item.name}</strong>
+${kind} / ${base} ${item.basePower} / Lv${item.level} / 付属${item.affixes.length}
+<div class="affixes">${aff}</div>
+${lockHtml}
+</div>`;
+}
+
+};
+
+const ShopSystem={
+
+herbPrice:10,
+herbHeal:50,
+
+materialPrice(name){
+return InventorySystem.materialPrice(name);
+},
+
+useHerb(game){
+if(!game||!game.player)return false;
+
+if((game.player.herb||0)<=0){
+game.addLog("薬草がありません");
+return false;
+}
+
+game.player.herb--;
+DamageSystem.healPlayer(game.player,this.herbHeal);
+game.addLog(`薬草を使用 HP+${this.herbHeal}`);
+
+if(game.ui){
+game.ui.refreshPlayerStatus();
+}
+
+return true;
+},
+
+buyHerb(game){
+if(!game||!game.player)return false;
+
+if((game.player.gold||0)<this.herbPrice){
+game.addLog("お金が足りません");
+return false;
+}
+
+game.player.gold-=this.herbPrice;
+game.player.herb=(game.player.herb||0)+1;
+game.addLog("薬草を購入");
+
+if(game.ui){
+game.ui.refreshInventory();
+}
+
+return true;
+},
+
+sellMaterial(game,name){
+if(!game||!game.player||!game.player.materials)return false;
+if((game.player.materials[name]||0)<=0)return false;
+
+const price=this.materialPrice(name);
+game.player.materials[name]--;
+game.player.gold=(game.player.gold||0)+price;
+game.addLog(`${name} 売却 +${price}G`);
+
+if(game.ui){
+game.ui.refreshInventory();
+}
+
+return true;
+},
+
+innHtml(game){
+return `<div class="invGroup">
+<div class="invGroupTitle">Inn</div>
+<div class="item-row">
+<strong>薬草</strong>
+所持 ${game.player.herb||0}個 / 価格 ${this.herbPrice}G
+<button id="innBuyHerbBtn" style="margin-top:5px;width:100%;height:30px;font-size:11px;">薬草を買う -${this.herbPrice}G</button>
+</div>
+</div>`;
+},
+
+bindInnButtons(game){
+const btn=document.getElementById("innBuyHerbBtn");
+if(!btn)return;
+
+btn.addEventListener("click",()=>{
+this.buyHerb(game);
+});
+},
+
+bindMaterialButtons(game){
+if(!game||!game.ui)return;
+
+for(const btn of game.ui.inventory.querySelectorAll("[data-sell-material]")){
+btn.addEventListener("click",()=>{
+this.sellMaterial(game,btn.dataset.sellMaterial);
+});
+}
+}
+
+};
+
+const EquipmentSystem={
+
+jumpType(slot){
+if(slot==="ringL"||slot==="ringR")return "ring";
+if(slot==="braceletL"||slot==="braceletR")return "bracelet";
+return slot;
+},
+
+renderEquipped(game){
+if(!game||!game.ui||!game.ui.equipped)return;
+const inv=game.inventory;
+
+game.ui.equipped.innerHTML=EquipmentData.currentSlots.map(slot=>{
+const item=inv.equipment[slot];
+const label=EquipmentData.label(slot);
+const jumpType=this.jumpType(slot);
+
+return item
+?`<div class="item-row equipped clickable" data-jump-type="${jumpType}"><strong>${label}</strong>${item.displayName||item.name}</div>`
+:`<div class="item-row empty clickable" data-jump-type="${jumpType}"><strong>${label}</strong>なし</div>`;
+}).join("");
+},
+
+bindEquippedJump(game){
+if(!game||!game.ui)return;
+const ui=game.ui;
+
+for(const row of ui.equipped.querySelectorAll("[data-jump-type]")){
+row.addEventListener("click",()=>{
+ui.inventoryMode="items";
+const type=row.dataset.jumpType;
+const target=ui.inventory.querySelector(`[data-group-type="${type}"]`);
+
+if(target){
+const box=ui.inventory.parentElement;
+box.scrollTop=target.offsetTop-ui.inventory.offsetTop;
+target.style.outline="2px solid #ffd166";
+target.style.borderRadius="8px";
+setTimeout(()=>{
+target.style.outline="";
+target.style.borderRadius="";
+},900);
+}
+});
+}
+},
+
+toggleLock(game,id){
+if(!game)return null;
+const item=game.inventory.items.find(i=>i.id===id);
+if(!item)return null;
+
+item.locked=!item.locked;
+game.addLog(item.locked?"武器をロック":"武器ロック解除");
+return item;
+},
+
+equipById(game,id){
+if(!game)return null;
+const item=game.inventory.equip(id);
+if(item)game.addLog(`${item.displayName||item.name}を装備`);
+return item;
+},
+
+bindInventoryClicks(game){
+if(!game||!game.ui)return;
+const ui=game.ui;
+
+for(const btn of ui.inventory.querySelectorAll("[data-lock-id]")){
+btn.addEventListener("click",e=>{
+e.stopPropagation();
+this.toggleLock(game,btn.dataset.lockId);
+ui.refreshInventory();
+});
+}
+
+for(const row of ui.inventory.querySelectorAll("[data-item-id]")){
+row.addEventListener("click",()=>{
+this.equipById(game,row.dataset.itemId);
+ui.refreshInventory();
+});
+}
+}
+
+};
+
+const LogSystem={
+
+shouldShow(text){
+if(!text)return false;
+
+return (
+text.includes("入手:") ||
+text.includes("糸 +") ||
+text.includes("毛皮 +") ||
+text.includes("鉄くず +") ||
+text.includes("石材 +") ||
+text.includes("G入手") ||
+text.includes("Shop：") ||
+text.includes("Inn：") ||
+text.includes("Camp：") ||
+text.includes("売却") ||
+text.includes("薬草") ||
+text.includes("が壊れた")
+);
+},
+
+add(game,text){
+if(!game)return;
+if(!this.shouldShow(text))return;
+
+game.logs.unshift(text);
+
+const equipLogs=game.logs.filter(v=>
+v.includes("入手:")
+);
+
+const otherLogs=game.logs.filter(v=>
+!v.includes("入手:")
+);
+
+game.logs=[
+...equipLogs.slice(0,4),
+...otherLogs
+].slice(0,20);
+},
+
+render(game){
+if(!game||!game.ui||!game.ui.log)return;
+
+game.ui.log.innerHTML=game.logs
+.slice(0,5)
+.map(s=>`<div>${s}</div>`)
+.join("");
+}
+
+};
+
+const UISystem={
+
+update(game){
+if(!game||!game.ui)return;
+game.ui.update();
+},
+
+refreshInventory(game){
+if(!game||!game.ui)return;
+game.ui.refreshInventory();
+},
+
+refreshPlayerStatus(game){
+if(!game||!game.ui)return;
+game.ui.refreshPlayerStatus();
+},
+
+showDropToast(game,item){
+if(!game||!game.ui)return;
+game.ui.showDropToast(item);
+}
+
+};
+
+const InputSystem={
+
+update(game){
+if(!game||!game.input)return;
+game.input.updateKeyboardVector();
+},
+
+handlePauseMenu(game){
+if(!game||!game.input)return false;
+
+if(game.input.consume("pauseQueued")){
+game.paused=!game.paused;
+const btn=document.getElementById("pauseBtn");
+if(btn)btn.textContent=game.paused?"▶":"II";
+}
+
+if(game.input.consume("menuQueued")){
+game.menuOpen=!game.menuOpen;
+game.ui.refreshInventory();
+}
+
+if(game.paused||game.menuOpen){
+UISystem.update(game);
+return true;
+}
+
+return false;
+}
+
+};
+
+const SaveSystem={
+
+buildData(game){
+return{
+player:{
+x:game.player.x,
+y:game.player.y,
+hp:game.player.hp,
+maxHp:game.player.maxHp,
+gold:game.player.gold||0,
+herb:game.player.herb||0,
+materials:game.player.materials||{
+"鉄くず":0,
+"毛皮":0,
+"糸":0,
+"石材":0
+}
+},
+items:game.inventory.items,
+weaponId:game.inventory.weapon?.id||null,
+armorId:game.inventory.armor?.id||null,
+magicId:game.inventory.magic?.id||null,
+
+equipment:{
+weapon:game.inventory.equipment.weapon?.id||null,
+armor:game.inventory.equipment.armor?.id||null,
+magic:game.inventory.equipment.magic?.id||null,
+
+head:game.inventory.equipment.head?.id||null,
+arm:game.inventory.equipment.arm?.id||null,
+waist:game.inventory.equipment.waist?.id||null,
+leg:game.inventory.equipment.leg?.id||null,
+
+neck:game.inventory.equipment.neck?.id||null,
+
+ringL:game.inventory.equipment.ringL?.id||null,
+ringR:game.inventory.equipment.ringR?.id||null,
+
+braceletL:game.inventory.equipment.braceletL?.id||null,
+braceletR:game.inventory.equipment.braceletR?.id||null
+},
+
+typeLimits:game.inventory.typeLimits,
+time:Date.now()
+};
+},
+
+applyData(game,data){
+if(!game||!data)return false;
+
+game.inventory.items=Array.isArray(data.items)?data.items.map(i=>{if(!i.displayName)i.displayName=i.name;return i;}):[];
+if(data.typeLimits)game.inventory.typeLimits=data.typeLimits;
+game.inventory.weapon=game.inventory.items.find(i=>i.id===data.weaponId)||null;
+game.inventory.armor=game.inventory.items.find(i=>i.id===data.armorId)||null;
+game.inventory.magic=game.inventory.items.find(i=>i.id===data.magicId)||null;
+
+if(data.equipment){
+for(const slot of EquipmentData.currentSlots){
+const savedId=data.equipment[slot];
+
+game.inventory.equipment[slot]=
+savedId
+? game.inventory.items.find(i=>i.id===savedId)||null
+: null;
+}
+
+if(game.inventory.equipment.ringL&&game.inventory.equipment.ringL.type!=="ring"){
+game.inventory.equipment.ringL=null;
+}
+
+if(game.inventory.equipment.ringR&&game.inventory.equipment.ringR.type!=="ring"){
+game.inventory.equipment.ringR=null;
+}
+
+if(
+game.inventory.equipment.ringL &&
+game.inventory.equipment.ringR &&
+game.inventory.equipment.ringL.id===game.inventory.equipment.ringR.id
+){
+game.inventory.equipment.ringR=null;
+}
+
+if(game.inventory.equipment.braceletL&&game.inventory.equipment.braceletL.type!=="bracelet"){
+game.inventory.equipment.braceletL=null;
+}
+
+if(game.inventory.equipment.braceletR&&game.inventory.equipment.braceletR.type!=="bracelet"){
+game.inventory.equipment.braceletR=null;
+}
+
+if(
+game.inventory.equipment.braceletL &&
+game.inventory.equipment.braceletR &&
+game.inventory.equipment.braceletL.id===game.inventory.equipment.braceletR.id
+){
+game.inventory.equipment.braceletR=null;
+}
+
+game.inventory.weapon=game.inventory.equipment.weapon||game.inventory.weapon;
+game.inventory.armor=game.inventory.equipment.armor||game.inventory.armor;
+game.inventory.magic=game.inventory.equipment.magic||game.inventory.magic;
+
+game.inventory.equipment.weapon=game.inventory.weapon;
+game.inventory.equipment.armor=game.inventory.armor;
+game.inventory.equipment.magic=game.inventory.magic;
+}
+
+game.inventory.trimAll();
+if(data.player){
+game.player.x=clamp(data.player.x||800,10,CONFIG.worldW-10);
+game.player.y=clamp(data.player.y||600,10,CONFIG.worldH-10);
+game.player.hp=clamp(data.player.hp||100,0,game.player.maxHp||100);
+game.player.gold=data.player.gold||0;
+game.player.herb=data.player.herb||0;
+game.player.materials=data.player.materials||{
+"鉄くず":0,
+"毛皮":0,
+"糸":0,
+"石材":0
+};
+}
+UISystem.refreshInventory(game);
+game.camera.follow(game.player);
+return true;
+},
+
+save(game,label="SAVE"){
+try{
+localStorage.setItem(SAVE_KEY,JSON.stringify(this.buildData(game)));
+game.addLog(`${label} 完了`);
+return true;
+}catch(e){
+game.addLog("SAVE失敗");
+return false;
+}
+},
+
+load(game,label="LOAD"){
+try{
+const raw=localStorage.getItem(SAVE_KEY);
+if(!raw){game.addLog("SAVEデータなし");return false}
+const data=JSON.parse(raw);
+if(this.applyData(game,data)){game.addLog(`${label} 完了`);return true}
+}catch(e){}
+game.addLog("LOAD失敗");
+return false;
+},
+
+tryLoadOnStart(game){
+try{
+const raw=localStorage.getItem(SAVE_KEY);
+if(!raw)return false;
+const data=JSON.parse(raw);
+if(this.applyData(game,data)){
+game.addLog("前回SAVE読込");
+return true;
+}
+}catch(e){}
+return false;
+},
+
+delete(){
+try{localStorage.removeItem(SAVE_KEY)}catch(e){}
+}
+
+};
+
+const SpawnSystem={
+
+spawnInitialEnemies(){
+
+this.enemies=[];
+this.allies=[];
+
+const fixed=[
+[1050,520],
+[1020,700],
+[700,820],
+[1180,620],
+[520,620],
+[1360,880],
+[1500,520],
+[340,1040]
+];
+
+for(const [x,y] of fixed){
+this.addEnemyAt(x,y);
+}
+
+for(let i=0;i<18;i++){
+this.spawnEnemyOutsideView();
+}
+
+for(let i=0;i<5;i++){
+
+this.allies.push({
+x:this.player.x+rand(-200,200),
+y:this.player.y+rand(-200,200),
+hp:200,
+maxHp:200,
+alive:true,
+name:"味方剣士"
+});
+
+}
+
+this.addLog("味方部隊 配備");
+this.addLog("BOSS強化 実装");
+},
+
+spawnEnemyOutsideView(){
+const side=Math.floor(Math.random()*4);
+const margin=CONFIG.spawnMargin;
+let x=this.player.x,y=this.player.y;
+
+if(side===0){x=this.player.x+rand(-CONFIG.viewW/2,CONFIG.viewW/2);y=this.player.y-CONFIG.viewH/2-margin}
+if(side===1){x=this.player.x+rand(-CONFIG.viewW/2,CONFIG.viewW/2);y=this.player.y+CONFIG.viewH/2+margin}
+if(side===2){x=this.player.x-CONFIG.viewW/2-margin;y=this.player.y+rand(-CONFIG.viewH/2,CONFIG.viewH/2)}
+if(side===3){x=this.player.x+CONFIG.viewW/2+margin;y=this.player.y+rand(-CONFIG.viewH/2,CONFIG.viewH/2)}
+
+x=clamp(x,80,CONFIG.worldW-80);
+y=clamp(y,80,CONFIG.worldH-80);
+
+if(dist(x,y,VILLAGE.x,VILLAGE.y)<VILLAGE.radius+330)return false;
+if(dist(x,y,this.player.x,this.player.y)<420)return false;
+
+return this.addEnemyAt(x,y);
+},
+
+spawnAllyOutsideView(){
+
+const side=Math.floor(Math.random()*4);
+const margin=CONFIG.spawnMargin;
+
+let x=this.player.x;
+let y=this.player.y;
+
+if(side===0){x=this.player.x+rand(-CONFIG.viewW/2,CONFIG.viewW/2);y=this.player.y-CONFIG.viewH/2-margin}
+if(side===1){x=this.player.x+rand(-CONFIG.viewW/2,CONFIG.viewW/2);y=this.player.y+CONFIG.viewH/2+margin}
+if(side===2){x=this.player.x-CONFIG.viewW/2-margin;y=this.player.y+rand(-CONFIG.viewH/2,CONFIG.viewH/2)}
+if(side===3){x=this.player.x+CONFIG.viewW/2+margin;y=this.player.y+rand(-CONFIG.viewH/2,CONFIG.viewH/2)}
+
+x=clamp(x,80,CONFIG.worldW-80);
+y=clamp(y,80,CONFIG.worldH-80);
+
+if(dist(x,y,VILLAGE.x,VILLAGE.y)<VILLAGE.radius+330)return false;
+if(dist(x,y,this.player.x,this.player.y)<420)return false;
+
+if(!this.allies)this.allies=[];
+
+this.allies.push({
+x,
+y,
+hp:200,
+maxHp:200,
+alive:true,
+name:"冒険者"
+});
+
+return true;
+},
+
+spawnSquadOutsideView(){
+const side=Math.floor(Math.random()*4);
+const margin=CONFIG.spawnMargin+120;
+let x=this.player.x,y=this.player.y;
+
+if(side===0){x=this.player.x+rand(-CONFIG.viewW/2,CONFIG.viewW/2);y=this.player.y-CONFIG.viewH/2-margin}
+if(side===1){x=this.player.x+rand(-CONFIG.viewW/2,CONFIG.viewW/2);y=this.player.y+CONFIG.viewH/2+margin}
+if(side===2){x=this.player.x-CONFIG.viewW/2-margin;y=this.player.y+rand(-CONFIG.viewH/2,CONFIG.viewH/2)}
+if(side===3){x=this.player.x+CONFIG.viewW/2+margin;y=this.player.y+rand(-CONFIG.viewH/2,CONFIG.viewH/2)}
+
+x=clamp(x,120,CONFIG.worldW-120);
+y=clamp(y,120,CONFIG.worldH-120);
+
+if(dist(x,y,VILLAGE.x,VILLAGE.y)<VILLAGE.radius+420)return false;
+if(dist(x,y,this.player.x,this.player.y)<560)return false;
+
+this.spawnSquadAt(x,y);
+return true;
+},
+
+addEnemyAt(x,y){
+const level=enemyLevelByDistance(x,y);
+const bossRank=rollBossRank(level);
+const area=AreaData.byLocation(x,y);
+const list=area.enemies||["goblin"];
+
+let type=choose(list);
+
+if(area.key==="village"){
+const villageList=[
+"goblin",
+"daggerGoblin",
+"spearman",
+"greatsword"
+];
+
+type=choose(villageList);
+}
+
+this.enemies.push(new Enemy({x,y,level,bossRank,type}));
+return true;
+},
+
+spawnSquadAt(x,y){
+const area=AreaData.byLocation(x,y);
+const level=enemyLevelByDistance(x,y);
+
+let squad=[
+{type:"goblin",dx:-34,dy:0},
+{type:"goblin",dx:0,dy:-8},
+{type:"goblin",dx:34,dy:0},
+{type:"spider",dx:-22,dy:-72},
+{type:"spider",dx:22,dy:-72}
+];
+
+if(area.key==="forest"||area.key==="deepForest"){
+squad=[
+{type:"wolf",dx:-38,dy:0},
+{type:"wolf",dx:0,dy:-8},
+{type:"wolf",dx:38,dy:0},
+{type:"spider",dx:-24,dy:-76},
+{type:"spider",dx:24,dy:-76}
+];
+}
+
+if(area.key==="rock"||area.key==="deep"){
+squad=[
+{type:"golem",dx:0,dy:0},
+{type:"goblin",dx:-44,dy:18},
+{type:"goblin",dx:44,dy:18},
+{type:"spider",dx:-30,dy:-82},
+{type:"spider",dx:30,dy:-82}
+];
+}
+
+const d=Math.max(1,dist(x,y,this.player.x,this.player.y));
+const fx=(this.player.x-x)/d;
+const fy=(this.player.y-y)/d;
+const sxSide=-fy;
+const sySide=fx;
+
+for(const s of squad){
+const front=s.dy||0;
+const side=s.dx||0;
+
+const px=x+fx*front+sxSide*side;
+const py=y+fy*front+sySide*side;
+
+const ex=clamp(px,80,CONFIG.worldW-80);
+const ey=clamp(py,80,CONFIG.worldH-80);
+
+const bossRank=Math.random()<.04?rollBossRank(level):0;
+this.enemies.push(new Enemy({x:ex,y:ey,level,bossRank,type:s.type}));
+}
+
+this.addLog("敵小隊が隊列を組んで現れた");
+},
+
+cleanupEnemies(){
+if(this.enemies.length<=CONFIG.maxEnemies)return;
+const keep=[];
+for(const e of this.enemies){
+const d=dist(e.x,e.y,this.player.x,this.player.y);
+if(e.alive&&d<CONFIG.activeEnemyRange)keep.push(e);
+else if(!e.alive&&d<900)keep.push(e);
+}
+while(keep.length>CONFIG.maxEnemies)keep.shift();
+this.enemies=keep;
+},
+
+autoSpawnEnemies(){
+if(this.playerInVillage)return;
+
+const px=this.player.x;
+const py=this.player.y;
+
+if(this.lastSpawnX===undefined){
+this.lastSpawnX=px;
+this.lastSpawnY=py;
+return;
+}
+
+const moved=dist(px,py,this.lastSpawnX,this.lastSpawnY);
+
+if(moved<90)return;
+
+this.lastSpawnX=px;
+this.lastSpawnY=py;
+
+const nearEnemies=this.enemies.filter(e=>e.alive&&dist(e.x,e.y,this.player.x,this.player.y)<1000).length;
+
+if(nearEnemies>=CONFIG.targetNearEnemies){
+if(this.allies&&this.allies.length<18&&Math.random()<.14){
+this.spawnAllyOutsideView();
+}
+this.cleanupEnemies();
+return;
+}
+
+let spawned=0;
+
+if(Math.random()<.10){
+const before=this.enemies.length;
+if(this.spawnSquadOutsideView())spawned+=this.enemies.length-before;
+}else{
+for(let i=0;i<CONFIG.autoSpawnBatch;i++){
+if(this.spawnEnemyOutsideView())spawned++;
+}
+}
+
+if(!this.allies)this.allies=[];
+
+if(this.allies.length<18&&Math.random()<.14){
+this.spawnAllyOutsideView();
+}
+
+if(spawned>0)this.addLog(`敵影 ${spawned}`);
+this.cleanupEnemies();
+}
+
+};
+
+const EnemySystem={
+
+updateEnemies(){
+for(const e of this.enemies){
+if(!e.alive)continue;
+
+const d=dist(e.x,e.y,this.player.x,this.player.y);
+
+if(
+e.bossRank ||
+d<CONFIG.activeEnemyRange
+){
+e.update(this);
+}
+}
+
+this.updateAllies();
+this.separateUnits();
+this.autoSpawnEnemies();
+},
+
+gameDropAllyItem(x,y,item){
+if(!item)return;
+this.drops.push(new LootDrop(x,y,item));
+},
+
+updateAllies(){
+if(!this.allies)return;
+
+for(const a of this.allies){
+
+if(!a.alive)continue;
+
+if(a.attackCooldown==null){
+a.attackCooldown=0;
+}
+
+if(a.attackCooldown>0){
+a.attackCooldown--;
+}
+
+let drop=null;
+let dropDist=999999;
+const dropSearchRange=260;
+
+for(const d of this.drops){
+const roughX=Math.abs(a.x-d.x);
+const roughY=Math.abs(a.y-d.y);
+
+if(roughX>dropSearchRange||roughY>dropSearchRange){
+continue;
+}
+
+const dd=dist(a.x,a.y,d.x,d.y);
+
+if(dd<dropDist){
+dropDist=dd;
+drop=d;
+}
+}
+
+if(drop&&dropDist<220){
+const dd=Math.max(1,dropDist);
+
+a.x+=(drop.x-a.x)/dd*0.75;
+a.y+=(drop.y-a.y)/dd*0.75;
+
+if(dropDist<28){
+
+if(drop.item){
+
+if(drop.item.type==="weapon"){
+if(!a.weapon||scoreItem(drop.item)>scoreItem(a.weapon)){
+a.weapon=drop.item;
+a.name="武装冒険者";
+}
+}
+
+if(drop.item.type==="armor"){
+if(!a.armor||scoreItem(drop.item)>scoreItem(a.armor)){
+a.armor=drop.item;
+}
+}
+
+if(drop.item.type==="head"){
+if(!a.head||scoreItem(drop.item)>scoreItem(a.head)){
+a.head=drop.item;
+}
+}
+
+if(drop.item.type==="arm"){
+if(!a.arm||scoreItem(drop.item)>scoreItem(a.arm)){
+a.arm=drop.item;
+}
+}
+
+}
+
+drop.pickedByAlly=true;
+}
+
+continue;
+}
+
+let target=null;
+let min=999999;
+const enemySearchRange=620;
+
+for(const e of this.enemies){
+
+if(!e.alive)continue;
+
+const roughX=Math.abs(a.x-e.x);
+const roughY=Math.abs(a.y-e.y);
+
+if(roughX>enemySearchRange||roughY>enemySearchRange){
+continue;
+}
+
+const d=dist(a.x,a.y,e.x,e.y);
+
+if(d<min){
+min=d;
+target=e;
+}
+
+}
+
+if(target&&min<520){
+
+const d=Math.max(1,min);
+
+if(min>60){
+
+const speed=0.55;
+
+a.x+=(target.x-a.x)/d*speed;
+a.y+=(target.y-a.y)/d*speed;
+
+}else{
+
+if(a.attackCooldown<=0){
+
+const damage=
+8+
+Math.floor((a.weapon?.basePower||0)/5)+
+Math.floor((a.arm?.basePower||0)/10);
+
+target.hitTimer=8;
+
+target.takeDamage(damage);
+
+if(!target.alive){
+target.killedByAlly=true;
+}
+
+const ad=Math.max(1,dist(a.x,a.y,target.x,target.y));
+a.attackAnim=14;
+a.attackTotal=14;
+a.attackDirX=(target.x-a.x)/ad;
+a.attackDirY=(target.y-a.y)/ad;
+
+a.attackCooldown=60;
+
+}
+
+}
+
+}
+
+}
+
+this.drops=this.drops.filter(
+d=>!d.pickedByAlly
+);
+
+this.allies=this.allies.filter(a=>{
+if(!a.alive)return false;
+
+const roughX=Math.abs(a.x-this.player.x);
+const roughY=Math.abs(a.y-this.player.y);
+
+if(roughX>2200||roughY>2200){
+return false;
+}
+
+return dist(a.x,a.y,this.player.x,this.player.y)<2200;
+});
+},
+
+separateUnits(){
+const p=this.player;
+
+const activeEnemies=this.enemies.filter(e=>{
+if(!e.alive)return false;
+if(e.bossRank)return true;
+return dist(e.x,e.y,p.x,p.y)<900;
+});
+
+for(const e of activeEnemies){
+const minDist=p.size/2+e.size/2+4;
+const d=Math.max(1,dist(p.x,p.y,e.x,e.y));
+
+if(d<minDist){
+const nx=(e.x-p.x)/d;
+const ny=(e.y-p.y)/d;
+const push=(minDist-d)*0.45;
+
+if(e.bossRank){
+e.x+=nx*push*0.15;
+e.y+=ny*push*0.15;
+p.x-=nx*push*1.15;
+p.y-=ny*push*1.15;
+}else{
+e.x+=nx*push;
+e.y+=ny*push;
+p.x-=nx*push*0.35;
+p.y-=ny*push*0.35;
+}
+}
+}
+
+for(let i=0;i<activeEnemies.length;i++){
+const a=activeEnemies[i];
+
+for(let j=i+1;j<activeEnemies.length;j++){
+const b=activeEnemies[j];
+
+const minDist=a.size/2+b.size/2+3;
+const d=Math.max(1,dist(a.x,a.y,b.x,b.y));
+
+if(d<minDist){
+const nx=(b.x-a.x)/d;
+const ny=(b.y-a.y)/d;
+const push=(minDist-d)*0.35;
+
+a.x-=nx*push;
+a.y-=ny*push;
+b.x+=nx*push;
+b.y+=ny*push;
+}
+}
+}
+
+if(this.allies){
+
+for(const a of this.allies){
+if(!a.alive)continue;
+
+const minDist=28;
+const d=Math.max(1,dist(p.x,p.y,a.x,a.y));
+
+if(d<minDist){
+const nx=(a.x-p.x)/d;
+const ny=(a.y-p.y)/d;
+const block=minDist-d;
+
+p.x-=nx*block;
+p.y-=ny*block;
+}
+}
+
+for(let i=0;i<this.allies.length;i++){
+const a=this.allies[i];
+if(!a.alive)continue;
+
+for(let j=i+1;j<this.allies.length;j++){
+const b=this.allies[j];
+if(!b.alive)continue;
+
+const minDist=26;
+const d=Math.max(1,dist(a.x,a.y,b.x,b.y));
+
+if(d<minDist){
+const nx=(b.x-a.x)/d;
+const ny=(b.y-a.y)/d;
+const push=(minDist-d)*0.35;
+
+a.x-=nx*push;
+a.y-=ny*push;
+b.x+=nx*push;
+b.y+=ny*push;
+}
+}
+}
+
+for(const a of this.allies){
+if(!a.alive)continue;
+
+for(const e of activeEnemies){
+const minDist=28+e.size/2;
+const d=Math.max(1,dist(a.x,a.y,e.x,e.y));
+
+if(d<minDist){
+const nx=(e.x-a.x)/d;
+const ny=(e.y-a.y)/d;
+const push=(minDist-d)*0.22;
+
+a.x-=nx*push;
+a.y-=ny*push;
+e.x+=nx*push;
+e.y+=ny*push;
+}
+}
+}
+}
+
+p.x=clamp(p.x,10,CONFIG.worldW-10);
+p.y=clamp(p.y,10,CONFIG.worldH-10);
+
+for(const e of activeEnemies){
+e.x=clamp(e.x,10,CONFIG.worldW-10);
+e.y=clamp(e.y,10,CONFIG.worldH-10);
+}
+
+if(this.allies){
+for(const a of this.allies){
+a.x=clamp(a.x,10,CONFIG.worldW-10);
+a.y=clamp(a.y,10,CONFIG.worldH-10);
+}
+}
+}
+
+};
+
+const DropSystem={
+
+updateDrops(){
+for(const e of this.enemies){
+if(!e.alive&&!e.dropped){
+e.dropped=true;
+
+if(!e.killedByAlly){
+
+const goldGain=Math.max(
+1,
+Math.floor(e.level*0.7+e.bossRank*3+Math.random()*4)
+);
+
+this.player.gold=(this.player.gold||0)+goldGain;
+this.addLog(`${e.name}から${goldGain}G入手`);
+
+if(!this.player.materials){
+this.player.materials={
+"鉄くず":0,
+"毛皮":0,
+"糸":0,
+"石材":0
+};
+}
+
+let materialName="鉄くず";
+
+if(e.type==="wolf")materialName="毛皮";
+else if(e.type==="spider")materialName="糸";
+else if(e.type==="golem")materialName="石材";
+
+const materialGain=e.bossRank?randInt(2,5):1;
+
+this.player.materials[materialName]=(this.player.materials[materialName]||0)+materialGain;
+this.addLog(`${materialName} +${materialGain}`);
+
+}
+
+const weaponItem=LootFactory.create(e,this);
+weaponItem.type="weapon";
+
+const enemyWeaponMap={
+daggerGoblin:"dagger",
+goblin:"sword",
+spearman:"spear",
+greatsword:"greatsword"
+};
+
+const fixedKind=enemyWeaponMap[e.type]||"sword";
+
+const tpl=WEAPON_NAMES.find(w=>w.kind===fixedKind)||WEAPON_NAMES[1];
+
+weaponItem.kind=tpl.kind;
+weaponItem.name=baseWeaponName(weaponItem.kind,weaponItem.affixes.length);
+weaponItem.displayName=affixPrefixName(weaponItem)+weaponItem.name;
+
+this.drops.push(new LootDrop(e.x-10,e.y,weaponItem));
+this.addLog(`${e.name}が${weaponItem.displayName||weaponItem.name}を落とした`);
+
+if(Math.random()<.45){
+let item=LootFactory.create(e,this);
+
+if(item.type==="weapon"){
+item=LootFactory.create(e,this);
+}
+
+if(item.type!=="weapon"){
+this.drops.push(new LootDrop(e.x+10,e.y,item));
+this.addLog(`${e.name}が追加で${item.displayName||item.name}を落とした`);
+}
+}
+}
+}
+
+this.drops=this.drops.filter(d=>d.update(this));
+
+},
+
+drawDrops(){
+for(const d of this.drops)d.draw(this.ctx,this.camera);
+}
+
+};
+
+const EffectSystem={
+
+spawnAffixBurst(game,x,y,mode){
+const list=game.inventory.equippedAffixes();
+const active=list.length?list:[{stat:"attack",value:3}];
+
+for(const a of active){
+game.effects.push(new VisualEffect(x,y,a,mode));
+}
+
+if(game.effects.length>180){
+game.effects.splice(0,game.effects.length-180);
+}
+},
+
+updateEffects(game){
+for(const fx of game.effects){
+fx.update();
+}
+
+game.effects=game.effects.filter(e=>e.life>0);
+},
+
+drawEffects(game){
+for(const fx of game.effects){
+fx.draw(game.ctx,game.camera);
+}
+}
+
+};
+
+const WorldSystem={
+
+isInVillage(game,x,y){
+return dist(x,y,VILLAGE.x,VILLAGE.y)<VILLAGE.radius*.9;
+},
+
+updatePlayerArea(game,beforeVillage){
+game.nearShop=false;
+game.nearInn=false;
+game.nearCamp=false;
+
+for(const npc of VILLAGE.npcs){
+if(npc.label==="Shop"&&dist(game.player.x,game.player.y,npc.x,npc.y)<80){
+game.nearShop=true;
+}
+
+if(npc.label==="Inn"&&dist(game.player.x,game.player.y,npc.x,npc.y)<80){
+game.nearInn=true;
+}
+}
+
+if(game.camps){
+for(const camp of game.camps){
+if(dist(game.player.x,game.player.y,camp.x,camp.y)<CAMP_CONFIG.shopRange){
+game.nearCamp=true;
+game.nearInn=true;
+break;
+}
+}
+}
+
+if(game.nearShop&&!game.wasNearShop){
+game.addLog("Shop：素材を売却できます");
+}
+
+if(game.nearInn&&!game.wasNearInn){
+game.addLog(game.nearCamp?"Camp：薬草を購入できます":"Inn：薬草を購入できます");
+}
+
+game.wasNearShop=game.nearShop;
+game.wasNearInn=game.nearInn;
+
+if(!beforeVillage&&game.playerInVillage)game.autoSave();
+
+if(game.wasInVillage&&!game.playerInVillage){
+game.reviveEnemiesFromVillageExit();
+}
+
+game.wasInVillage=game.playerInVillage;
+
+if(game.playerInVillage&&game.player.hp<game.player.maxHp){
+game.player.hp=clamp(
+game.player.hp+VILLAGE.healRate+stat(game,"hp")*.002,
+0,
+game.player.maxHp
+);
+}
+},
+
+updatePlayer(game){
+const beforeVillage=game.playerInVillage;
+
+game.playerInVillage=this.isInVillage(game,game.player.x,game.player.y);
+
+game.player.update(game);
+
+game.playerInVillage=this.isInVillage(game,game.player.x,game.player.y);
+
+this.updatePlayerArea(game,beforeVillage);
+},
+
+updateWorld(game){
+game.camera.follow(game.player);
+this.updateCamps(game);
+
+const area=AreaData.byLocation(game.player.x,game.player.y);
+
+if(!game.currentArea||game.currentArea.key!==area.key){
+game.currentArea=area;
+game.currentBgmKey=area.bgm;
+game.addLog(`${area.name}に入った`);
+}
+},
+
+updateCamps(game){
+if(!game.camps)game.camps=[];
+
+for(const camp of game.camps){
+const d=dist(game.player.x,game.player.y,camp.x,camp.y);
+
+if(d<camp.radius){
+camp.life=Math.max(camp.life,60);
+game.player.hp=clamp(
+game.player.hp+CAMP_CONFIG.healRate,
+0,
+game.player.maxHp
+);
+}
+
+camp.life--;
+
+if(camp.life<=0){
+const zone=AreaData.zones.find(z=>z.key===camp.zoneKey);
+if(zone){
+game.respawnCamp(zone);
+}
+}
+}
+
+game.nearCamp=game.camps.some(
+camp=>dist(game.player.x,game.player.y,camp.x,camp.y)<CAMP_CONFIG.shopRange
+);
+}
+
+};
+
+const Renderer={
+
+draw(game){
+const ctx=game.ctx;
+ctx.clearRect(0,0,CONFIG.viewW,CONFIG.viewH);
+
+ctx.save();
+ctx.translate(CONFIG.viewW/2,CONFIG.viewH/2);
+ctx.scale(1.5,1.5);
+ctx.translate(-CONFIG.viewW/2,-CONFIG.viewH/2);
+
+game.world.draw(ctx,game.camera);
+game.drawCamps();
+
+if(game.playerInVillage)game.drawVillageBanner();
+
+game.drawDrops();
+
+for(const e of game.enemies)e.draw(ctx,game.camera);
+
+if(game.allies){
+for(const a of game.allies){
+
+if(!a.alive)continue;
+
+const x=game.camera.sx(a.x);
+const y=game.camera.sy(a.y);
+
+const allyArmor=a.armor;
+const allyHead=a.head;
+const allyArm=a.arm;
+
+const armorSpec=ARMOR_TYPES.find(v=>v.key===allyArmor?.kind)||ARMOR_TYPES[0];
+const headSpec=HEAD_TYPES.find(v=>v.key===allyHead?.kind)||HEAD_TYPES[0];
+const armSpec=ARM_TYPES.find(v=>v.key===allyArm?.kind)||ARM_TYPES[0];
+
+ctx.fillStyle=allyArmor?itemRankColor(allyArmor):"#4da6ff";
+ctx.fillRect(x-10,y-10,20,20);
+
+ctx.fillStyle=allyArm?itemRankColor(allyArm):armSpec.color;
+ctx.fillRect(x-15,y-8,5,14);
+ctx.fillRect(x+10,y-8,5,14);
+
+ctx.fillStyle="#f0c090";
+ctx.fillRect(x-7,y-20,14,12);
+
+ctx.fillStyle=allyHead?itemRankColor(allyHead):headSpec.color;
+ctx.fillRect(x-8,y-23,16,5);
+
+if(a.attackAnim>0){
+a.attackAnim--;
+
+const total=Math.max(1,a.attackTotal||14);
+const progress=clamp((total-a.attackAnim)/total,0,1);
+
+const baseAngle=Math.atan2(a.attackDirY||1,a.attackDirX||0);
+const arc=2.1;
+const len=42;
+const swordAngle=baseAngle-arc/2+progress*arc;
+
+const sx=x+Math.cos(swordAngle)*len;
+const sy=y+Math.sin(swordAngle)*len;
+
+ctx.strokeStyle="#ffffff";
+ctx.lineWidth=4;
+ctx.lineCap="round";
+ctx.beginPath();
+ctx.moveTo(x,y);
+ctx.lineTo(sx,sy);
+ctx.stroke();
+
+ctx.strokeStyle="#bfe2ff";
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.moveTo(x,y);
+ctx.lineTo(sx,sy);
+ctx.stroke();
+}
+
+ctx.fillStyle="#ffffff";
+ctx.font="10px monospace";
+ctx.textAlign="center";
+ctx.fillText("ALLY",x,y-20);
+ctx.textAlign="left";
+}
+}
+
+for(const p of game.projectiles)p.draw(ctx,game.camera);
+for(const p of game.enemyProjectiles)p.draw(ctx,game.camera);
+game.drawEffects();
+
+if(game.testRangeView)game.drawAttackRanges();
+
+game.player.draw(ctx,game.camera);
+
+ctx.restore();
+
+game.drawAreaName();
+
+if(game.paused)game.drawOverlay("PAUSE");
+if(game.player.hp<=0)game.drawOverlay("GAME OVER");
+
+},
+
+drawOverlay(game,label){
+return game.drawOverlay(label);
+},
+
+drawAreaName(game){
+return game.drawAreaName();
+},
+
+drawCamps(game){
+return game.drawCamps();
+},
+
+drawVillageBanner(game){
+return game.drawVillageBanner();
+}
+
+};
+
+
+const GameController={
+
+update(game){
+InputSystem.update(game);
+
+if(!game.gameStarted){
+UISystem.update(game);
+return;
+}
+
+if(game.player.hp<=0){
+
+if(game.gameOverTimer==null){
+game.gameOverTimer=60;
+}
+
+game.gameOverTimer--;
+
+if(game.gameOverTimer<=0){
+const titleScreen=document.getElementById("titleScreen");
+if(titleScreen)titleScreen.style.display="flex";
+
+game.gameStarted=false;
+game.gameOverTimer=null;
+game.restartGame(true);
+}
+
+game.updateUI();
+return;
+}
+
+if(InputSystem.handlePauseMenu(game))return;
+
+game.updatePlayer();
+game.updateEnemies();
+game.updateProjectiles();
+game.updateEnemyProjectiles();
+game.updateEffects();
+game.updateDrops();
+game.updateWorld();
+game.updateUI();
+},
+
+draw(game){
+return Renderer.draw(game);
+},
+
+loop(game,now=0){
+if(!game.lastTime)game.lastTime=now;
+
+game.dt=Math.min(
+2,
+(now-game.lastTime)/16.666
+);
+
+game.lastTime=now;
+
+game.update();
+game.draw();
+
+requestAnimationFrame(t=>game.loop(t));
+}
+
+};
+
+
+class Game{
+constructor(){
+this.canvas=document.getElementById("game");
+this.ctx=this.canvas.getContext("2d");
+globalThis.game=this;
+this.input=new Input();
+this.camera=new Camera();
+this.world=new World();
+this.inventory=new Inventory();
+this.player=new Player();
+this.enemies=[];
+this.projectiles=[];
+this.enemyProjectiles=[];
+this.effects=[];
+this.drops=[];
+this.camps=[];
+this.logs=[];
+this.paused=false;
+this.menuOpen=false;
+this.gameStarted=false;
+this.playerInVillage=false;
+this.wasInVillage=false;
+this.spawnCooldown=0;
+this.testRangeView=false;
+this.guideVillage=false;
+this.guideCamp=false;
+this.currentArea=null;
+this.currentBgmKey="";
+this.ui=new UI(this);
+this.spawnInitialEnemies();
+this.createInitialCamps();
+this.inventory.trimAll();
+UISystem.refreshInventory(this);
+this.playerInVillage=this.isInVillage(this.player.x,this.player.y);
+this.wasInVillage=this.playerInVillage;
+
+const bootScreen=document.getElementById("bootScreen");
+const titleScreen=document.getElementById("titleScreen");
+const bootBtn=document.getElementById("bootBtn");
+const titleStartBtn=document.getElementById("titleStartBtn");
+const titleLoadBtn=document.getElementById("titleLoadBtn");
+
+if(bootBtn){
+bootBtn.addEventListener("click",()=>{
+if(bootScreen)bootScreen.style.display="none";
+if(titleScreen)titleScreen.style.display="flex";
+});
+}
+
+if(titleStartBtn){
+titleStartBtn.addEventListener("click",()=>{
+if(titleScreen)titleScreen.style.display="none";
+this.restartGame();
+this.gameStarted=true;
+});
+}
+
+if(titleLoadBtn){
+titleLoadBtn.addEventListener("click",()=>{
+if(titleScreen)titleScreen.style.display="none";
+this.gameStarted=true;
+this.loadGame();
+});
+}
+
+requestAnimationFrame(()=>this.loop());
+}
+spawnInitialEnemies(){
+return SpawnSystem.spawnInitialEnemies.call(this);
+}
+
+createInitialCamps(){
+this.camps=[];
+
+for(const zone of AreaData.zones){
+this.respawnCamp(zone);
+}
+}
+
+respawnCamp(zone){
+let x=VILLAGE.x;
+let y=VILLAGE.y;
+let ok=false;
+
+for(let i=0;i<200;i++){
+const rate=rand(zone.min,Math.min(zone.max,1));
+const angle=rand(0,Math.PI*2);
+const r=rate*MAX_VILLAGE_DISTANCE;
+
+x=clamp(
+VILLAGE.x+Math.cos(angle)*r,
+120,
+CONFIG.worldW-120
+);
+
+y=clamp(
+VILLAGE.y+Math.sin(angle)*r,
+120,
+CONFIG.worldH-120
+);
+
+if(dist(x,y,VILLAGE.x,VILLAGE.y)<CAMP_CONFIG.minVillageDistance){
+continue;
+}
+
+if(AreaData.byLocation(x,y).key!==zone.key){
+continue;
+}
+
+ok=true;
+break;
+}
+
+if(!ok)return null;
+
+const camp={
+x,
+y,
+zoneKey:zone.key,
+zoneName:zone.name,
+radius:CAMP_CONFIG.radius,
+life:CAMP_CONFIG.lifeTime,
+maxLife:CAMP_CONFIG.lifeTime
+};
+
+this.camps=this.camps.filter(c=>c.zoneKey!==zone.key);
+this.camps.push(camp);
+
+return camp;
+}
+spawnEnemyOutsideView(){
+return SpawnSystem.spawnEnemyOutsideView.call(this);
+}
+
+spawnAllyOutsideView(){
+return SpawnSystem.spawnAllyOutsideView.call(this);
+}
+
+spawnSquadOutsideView(){
+return SpawnSystem.spawnSquadOutsideView.call(this);
+}
+addEnemyAt(x,y){
+return SpawnSystem.addEnemyAt.call(this,x,y);
+}
+
+spawnSquadAt(x,y){
+return SpawnSystem.spawnSquadAt.call(this,x,y);
+}
+cleanupEnemies(){
+return SpawnSystem.cleanupEnemies.call(this);
+}
+autoSpawnEnemies(){
+return SpawnSystem.autoSpawnEnemies.call(this);
+}
+addLog(t){
+return LogSystem.add(this,t);
+}
+isInVillage(x,y){return WorldSystem.isInVillage(this,x,y)}
+reviveEnemiesFromVillageExit(){for(const e of this.enemies)e.reviveAtSpawn();this.addLog("村の外に敵が復活した")}
+spawnAffixBurst(x,y,mode){
+return EffectSystem.spawnAffixBurst(this,x,y,mode);
+}
+castMagic(){
+const a=Math.atan2(this.player.dirY,this.player.dirX);
+const m=this.inventory.magicSpec();
+this.projectiles.push(new Projectile(this.player.x,this.player.y,Math.cos(a)*CONFIG.fireballSpeed,Math.sin(a)*CONFIG.fireballSpeed,m));
+}
+saveData(){
+return SaveSystem.buildData(this);
+}
+
+applySaveData(data){
+return SaveSystem.applyData(this,data);
+}
+
+saveGame(label="SAVE"){
+return SaveSystem.save(this,label);
+}
+
+manualSave(){
+return SaveSystem.save(this,"SAVE");
+}
+
+autoSave(){
+return SaveSystem.save(this,"AUTO SAVE");
+}
+
+loadGame(){
+return SaveSystem.load(this,"LOAD");
+}
+
+tryLoadOnStart(){
+return SaveSystem.tryLoadOnStart(this);
+}
+
+restartGame(keepSave=false){
+if(!keepSave){
+SaveSystem.delete();
+}
+
+this.inventory=new Inventory();
+this.player=new Player();
+this.enemies=[];
+this.projectiles=[];
+this.enemyProjectiles=[];
+this.effects=[];
+this.drops=[];
+this.camps=[];
+this.logs=[];
+this.paused=false;
+this.menuOpen=false;
+this.spawnCooldown=0;
+this.testRangeView=false;
+this.guideVillage=false;
+this.guideCamp=false;
+this.currentArea=null;
+this.currentBgmKey="";
+document.getElementById("rangeViewBtn").textContent="攻撃範囲表示 OFF";
+this.spawnInitialEnemies();
+this.createInitialCamps();
+UISystem.refreshInventory(this);
+this.playerInVillage=this.isInVillage(this.player.x,this.player.y);
+this.wasInVillage=this.playerInVillage;
+this.camera.follow(this.player);
+this.addLog("最初から開始");
+}
+updatePlayer(){
+const beforeVillage=this.playerInVillage;
+
+this.playerInVillage=this.isInVillage(this.player.x,this.player.y);
+
+this.player.update(this);
+
+this.playerInVillage=this.isInVillage(this.player.x,this.player.y);
+
+this.nearShop=false;
+this.nearInn=false;
+this.nearCamp=false;
+
+for(const npc of VILLAGE.npcs){
+if(npc.label==="Shop"&&dist(this.player.x,this.player.y,npc.x,npc.y)<80){
+this.nearShop=true;
+}
+
+if(npc.label==="Inn"&&dist(this.player.x,this.player.y,npc.x,npc.y)<80){
+this.nearInn=true;
+}
+}
+
+if(this.camps){
+for(const camp of this.camps){
+if(dist(this.player.x,this.player.y,camp.x,camp.y)<CAMP_CONFIG.shopRange){
+this.nearCamp=true;
+this.nearInn=true;
+break;
+}
+}
+}
+
+if(this.nearShop&&!this.wasNearShop){
+this.addLog("Shop：素材を売却できます");
+}
+
+if(this.nearInn&&!this.wasNearInn){
+this.addLog(this.nearCamp?"Camp：薬草を購入できます":"Inn：薬草を購入できます");
+}
+
+this.wasNearShop=this.nearShop;
+this.wasNearInn=this.nearInn;
+
+if(!beforeVillage&&this.playerInVillage)this.autoSave();
+
+if(this.wasInVillage&&!this.playerInVillage)
+this.reviveEnemiesFromVillageExit();
+
+this.wasInVillage=this.playerInVillage;
+
+if(this.playerInVillage&&this.player.hp<this.player.maxHp){
+this.player.hp=clamp(
+this.player.hp+VILLAGE.healRate+stat(this,"hp")*.002,
+0,
+this.player.maxHp
+);
+}
+}
+
+updateEnemies(){
+return EnemySystem.updateEnemies.call(this);
+}
+
+gameDropAllyItem(x,y,item){
+return EnemySystem.gameDropAllyItem.call(this,x,y,item);
+}
+
+updateAllies(){
+return EnemySystem.updateAllies.call(this);
+}
+
+separateUnits(){
+return EnemySystem.separateUnits.call(this);
+}
+
+updateProjectiles(){
+for(const p of this.projectiles)p.update(this);
+this.projectiles=this.projectiles.filter(p=>p.life>0);
+}
+
+updateEnemyProjectiles(){
+for(const p of this.enemyProjectiles)p.update(this);
+this.enemyProjectiles=this.enemyProjectiles.filter(p=>p.life>0);
+}
+
+updateEffects(){
+return EffectSystem.updateEffects(this);
+}
+
+updateDrops(){
+return DropSystem.updateDrops.call(this);
+}
+
+drawDrops(){
+return DropSystem.drawDrops.call(this);
+}
+
+drawEffects(){
+return EffectSystem.drawEffects(this);
+}
+
+updateWorld(){
+return WorldSystem.updateWorld(this);
+}
+
+updateCamps(){
+return WorldSystem.updateCamps(this);
+}
+
+updateUI(){
+UISystem.update(this);
+}
+
+drawAttackRanges(){
+const ctx=this.ctx;
+const p=this.player;
+const c=this.camera;
+ctx.save();
+const spec=this.inventory.weaponSpec();
+let playerRange=spec.range;
+ctx.strokeStyle="rgba(80,180,255,.50)";
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.arc(c.sx(p.x),c.sy(p.y),playerRange,0,Math.PI*2);
+ctx.stroke();
+ctx.strokeStyle="rgba(255,80,80,.30)";
+ctx.lineWidth=2;
+for(const e of this.enemies){
+if(!e.alive)continue;
+const r=CONFIG.enemySwordRange+(e.bossRank?10:0)+Math.min(25,e.level*.25);
+ctx.beginPath();
+ctx.arc(c.sx(e.x),c.sy(e.y),r,0,Math.PI*2);
+ctx.stroke();
+}
+ctx.restore();
+}
+update(){
+return GameController.update(this);
+}
+
+draw(){
+return GameController.draw(this);
+}
+drawOverlay(label){
+const ctx=this.ctx;
+ctx.fillStyle="rgba(0,0,0,.58)";
+ctx.fillRect(0,0,CONFIG.viewW,CONFIG.viewH);
+ctx.fillStyle="#fff";
+ctx.font="36px monospace";
+ctx.textAlign="center";
+ctx.fillText(label,CONFIG.viewW/2,CONFIG.viewH/2);
+ctx.textAlign="left";
+}
+drawAreaName(){
+const area=this.currentArea||AreaData.byLocation(this.player.x,this.player.y);
+const ctx=this.ctx;
+
+ctx.fillStyle="rgba(5,7,10,.55)";
+ctx.fillRect(12,12,220,70);
+
+ctx.fillStyle="#fff4c7";
+ctx.font="13px monospace";
+ctx.fillText(area.name,24,32);
+
+if(this.guideVillage){
+
+const dx=VILLAGE.x-this.player.x;
+const dy=VILLAGE.y-this.player.y;
+
+let dir="→";
+
+if(Math.abs(dx)>Math.abs(dy)){
+dir=dx>0?"→":"←";
+}else{
+dir=dy>0?"↓":"↑";
+}
+
+ctx.fillStyle="#ffd166";
+ctx.fillText("村 "+dir,24,52);
+}
+
+if(this.guideCamp){
+ctx.fillStyle="#9cff9c";
+ctx.fillText("Camp数 "+(this.camps?this.camps.length:0),120,52);
+
+if(this.camps&&this.camps.length){
+
+const currentArea=AreaData.byLocation(
+this.player.x,
+this.player.y
+);
+
+let nearest=null;
+
+for(const camp of this.camps){
+
+if(camp.zoneKey!==currentArea.key){
+continue;
+}
+
+nearest=camp;
+break;
+}
+
+if(nearest){
+
+const dx=nearest.x-this.player.x;
+const dy=nearest.y-this.player.y;
+
+let dir="→";
+
+if(Math.abs(dx)>Math.abs(dy)){
+dir=dx>0?"→":"←";
+}else{
+dir=dy>0?"↓":"↑";
+}
+
+ctx.fillStyle="#9cff9c";
+ctx.fillText(currentArea.name+" Camp "+dir,120,70);
+}
+}
+}
+}
+
+drawCamps(){
+if(!this.camps)return;
+
+const ctx=this.ctx;
+const c=this.camera;
+
+for(const camp of this.camps){
+const x=c.sx(camp.x);
+const y=c.sy(camp.y);
+const blink=camp.life<60*30&&Math.floor(camp.life/15)%2===0;
+
+if(blink)continue;
+
+ctx.fillStyle="rgba(255,220,120,.16)";
+ctx.beginPath();
+ctx.arc(x,y,camp.radius,0,Math.PI*2);
+ctx.fill();
+
+ctx.strokeStyle="rgba(255,220,120,.55)";
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.arc(x,y,camp.radius,0,Math.PI*2);
+ctx.stroke();
+
+ctx.fillStyle="#5a3418";
+ctx.fillRect(x-22,y-10,44,20);
+
+ctx.fillStyle="#d68a3a";
+ctx.beginPath();
+ctx.moveTo(x-30,y-10);
+ctx.lineTo(x,y-36);
+ctx.lineTo(x+30,y-10);
+ctx.closePath();
+ctx.fill();
+
+const flame=Math.sin(Date.now()*0.01+camp.x)*3;
+
+ctx.fillStyle="rgba(255,180,60,.18)";
+ctx.beginPath();
+ctx.arc(x+34,y+18,18+flame,0,Math.PI*2);
+ctx.fill();
+
+ctx.fillStyle="#ffcc55";
+ctx.beginPath();
+ctx.arc(x+34,y+18,8+flame*0.3,0,Math.PI*2);
+ctx.fill();
+
+ctx.fillStyle="#ff8844";
+ctx.beginPath();
+ctx.moveTo(x+34,y+8-flame);
+ctx.lineTo(x+28,y+22);
+ctx.lineTo(x+40,y+22);
+ctx.closePath();
+ctx.fill();
+
+ctx.fillStyle="#fff4aa";
+ctx.beginPath();
+ctx.moveTo(x+34,y+12-flame*0.5);
+ctx.lineTo(x+31,y+20);
+ctx.lineTo(x+37,y+20);
+ctx.closePath();
+ctx.fill();
+
+ctx.fillStyle="#fff4c7";
+ctx.font="11px monospace";
+ctx.textAlign="center";
+ctx.fillText(camp.zoneName+"キャンプ",x,y-46);
+ctx.textAlign="left";
+}
+}
+
+drawVillageBanner(){
+const ctx=this.ctx;
+ctx.fillStyle="rgba(255,232,166,.13)";
+ctx.fillRect(0,0,CONFIG.viewW,CONFIG.viewH);
+ctx.fillStyle="rgba(5,7,10,.62)";
+ctx.fillRect(CONFIG.viewW/2-130,42,260,34);
+ctx.fillStyle="#fff4c7";
+ctx.font="14px monospace";
+ctx.textAlign="center";
+ctx.fillText(`${VILLAGE.name} SAFE`,CONFIG.viewW/2,64);
+ctx.textAlign="left";
+}
+loop(now=0){
+return GameController.loop(this,now);
+}
+}
+new Game();
+
+</script>
+</body>
+</html>
