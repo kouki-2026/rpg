@@ -1,0 +1,533 @@
+html差し替えソフトv2.1
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>KOUKI Patch Tool v1.9</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<style>
+body{margin:0;background:#111;color:white;font-family:monospace;}
+#app{width:380px;margin:0 auto;padding:10px;box-sizing:border-box;}
+textarea{
+width:100%;
+background:#050505;
+color:white;
+border:1px solid #555;
+box-sizing:border-box;
+font-size:16px;
+margin-bottom:6px;
+}
+#htmlBox{height:150px;}
+#beforeBox,#afterBox{height:70px;}
+#resultBox{height:180px;}
+button,input{width:100%;padding:12px;margin-bottom:6px;background:#333;color:white;border:1px solid #777;font-weight:bold;font-size:16px;box-sizing:border-box;}
+#checkBtn{background:#3b5f2a;}
+#undoBtn{background:#5a3a22;}
+#downloadBtn{background:#264653;}
+#log{color:#aaa;font-size:12px;white-space:pre-wrap;}
+#preview{
+margin:8px 0;
+padding:8px;
+background:#050505;
+border:1px solid #555;
+color:#ddd;
+font-size:11px;
+white-space:pre-wrap;
+overflow:auto;
+max-height:260px;
+}
+#runBox{
+height:140px;
+}
+#runFrame{
+width:380px;
+height:760px;
+background:#000;
+border:8px solid #222;
+border-radius:18px;
+margin:0 auto 8px auto;
+display:block;
+box-shadow:0 0 12px rgba(0,0,0,.5);
+}
+.hitBlock{margin:8px 0;padding:6px;border:1px solid #444;background:#111;}
+.hitLine{background:#7a1f1f;color:#fff;display:block;}
+.normalLine{display:block;}
+.blockTitle{color:#ffd166;margin-top:6px;}
+.blockCode{background:#080808;border:1px solid #555;padding:6px;margin-top:4px;white-space:pre-wrap;color:#d8f0ff;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<h3>ファイル読込</h3>
+<input type="file" id="fileInput" accept=".html,.css,.js,.txt">
+<button id="loadFileBtn">ファイルを本体HTMLへ読込</button>
+
+<h3>本体HTML</h3>
+<textarea id="htmlBox" placeholder="ここに本体HTMLを貼る"></textarea>
+<button id="clearHtmlBtn">本体HTMLクリア</button>
+
+<h3>差し替え前コード</h3>
+<textarea id="beforeBox" placeholder="置き換えたいコード"></textarea>
+<button id="clearBeforeBtn">差し替え前クリア</button>
+<button id="checkBtn">差し替え前チェック</button>
+
+<h3>ヒット周辺表示</h3>
+<div id="preview">まだチェックしていません</div>
+<button id="copyBlockBtn">検出ブロックコピー</button>
+
+<h3>差し替え後コード</h3>
+<textarea id="afterBox" placeholder="新しいコード"></textarea>
+<button id="clearAfterBtn">差し替え後クリア</button>
+
+<button id="replaceBtn">差し替え反映</button>
+<button id="undoBtn">一手戻る</button>
+
+<h3>完成HTML</h3>
+<textarea id="resultBox" placeholder="ここに完成HTMLが出る"></textarea>
+<button id="clearResultBtn">完成HTMLクリア</button>
+<button id="copyBtn">完成HTMLコピー</button>
+<button id="promoteBtn">完成HTML→本体HTML</button>
+<button id="downloadBtn">完成HTMLをindex.html保存</button>
+
+<h3>自由HTML動作確認</h3>
+<textarea id="runBox" placeholder="ここに動作確認したいHTMLを貼る"></textarea>
+<button id="htmlToRunBtn">本体HTML→動作確認</button>
+<button id="resultToRunBtn">完成HTML→動作確認</button>
+<button id="runBtn">このHTMLを動作確認</button>
+<button id="clearRunBtn">動作確認HTMLクリア</button>
+<iframe id="runFrame"></iframe>
+
+<div id="log">待機中</div>
+</div>
+
+<script>
+let history=[];
+let lastDetectedBlock="";
+
+const htmlBox=document.getElementById("htmlBox");
+const beforeBox=document.getElementById("beforeBox");
+const afterBox=document.getElementById("afterBox");
+const resultBox=document.getElementById("resultBox");
+const runBox=document.getElementById("runBox");
+const log=document.getElementById("log");
+const preview=document.getElementById("preview");
+
+function setLog(text){
+  log.textContent=text;
+}
+
+function getSource(){
+  if(resultBox.value.trim()!==""){
+    return resultBox.value;
+  }
+  return htmlBox.value;
+}
+
+function saveHistory(html){
+  if(html.trim()!==""){
+    history.push(html);
+  }
+}
+
+function countHits(html,before){
+  if(before==="")return 0;
+  return html.split(before).length-1;
+}
+
+function escapeHtml(text){
+  return text
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;");
+}
+
+function findBlockAroundHit(html,hitIndex){
+  const hitLineStart=html.lastIndexOf("\n",hitIndex)+1;
+  const hitLineEnd=html.indexOf("\n",hitLineStart);
+  const hitLine=html.slice(hitLineStart,hitLineEnd===-1?html.length:hitLineEnd).trim();
+
+  function readBraceBlock(start){
+    const braceStart=html.indexOf("{",start);
+    if(braceStart===-1)return null;
+    let depth=0;
+    for(let i=braceStart;i<html.length;i++){
+      if(html[i]==="{")depth++;
+      if(html[i]==="}")depth--;
+      if(depth===0)return html.slice(start,i+1);
+    }
+    return null;
+  }
+
+  function readHtmlBlock(start){
+    const lineEnd=html.indexOf("\n",start);
+    const line=html.slice(start,lineEnd===-1?html.length:lineEnd).trim();
+    const tagMatch=line.match(/^<([a-zA-Z0-9]+)(\s|>|$)/);
+    if(!tagMatch)return null;
+
+    const tag=tagMatch[1];
+
+    if(line.includes("</"+tag+">")){
+      return line;
+    }
+
+    const closeTag="</"+tag+">";
+    const closeIndex=html.indexOf(closeTag,start);
+    if(closeIndex!==-1){
+      return html.slice(start,closeIndex+closeTag.length);
+    }
+
+    return null;
+  }
+
+  let pos=hitLineStart;
+
+  while(pos>=0){
+    const lineStart=html.lastIndexOf("\n",pos-1)+1;
+    const lineEnd=html.indexOf("\n",lineStart);
+    const line=html.slice(lineStart,lineEnd===-1?html.length:lineEnd).trim();
+
+    if(line.match(/^[A-Za-z0-9_]+\s*\([^)]*\)\s*{/)){
+      const block=readBraceBlock(lineStart);
+      if(block){
+        return {type:"JavaScript関数",text:block};
+      }
+    }
+
+    if(line.match(/^[.#A-Za-z0-9_\-\s,:>\[\]="']+\s*{/)){
+      const block=readBraceBlock(lineStart);
+      if(block){
+        return {type:"CSSブロック",text:block};
+      }
+    }
+
+    if(line.startsWith("<")&&!line.startsWith("</")&&!line.startsWith("<!")){
+      const block=readHtmlBlock(lineStart);
+      if(block){
+        return {type:"HTMLブロック",text:block};
+      }
+    }
+
+    if(lineStart<=0)break;
+    pos=lineStart-1;
+  }
+
+  return null;
+}
+
+function makeHitPreview(html,before){
+  lastDetectedBlock="";
+  const lines=html.split(/\r?\n/);
+  const htmlBeforeIndex=[];
+  let pos=0;
+
+  for(let i=0;i<lines.length;i++){
+    htmlBeforeIndex.push(pos);
+    pos+=lines[i].length+1;
+  }
+
+  const hitIndexes=[];
+  let searchFrom=0;
+
+  while(true){
+    const found=html.indexOf(before,searchFrom);
+    if(found===-1)break;
+    hitIndexes.push(found);
+    searchFrom=found+before.length;
+  }
+
+  if(hitIndexes.length===0){
+    preview.textContent="ヒットなし";
+    return;
+  }
+
+  let out="";
+
+  for(let h=0;h<hitIndexes.length;h++){
+    const hitIndex=hitIndexes[h];
+    let hitLine=0;
+
+    for(let i=0;i<htmlBeforeIndex.length;i++){
+      if(htmlBeforeIndex[i]<=hitIndex){
+        hitLine=i;
+      }else{
+        break;
+      }
+    }
+
+    const start=Math.max(0,hitLine-3);
+    const end=Math.min(lines.length-1,hitLine+3);
+
+    out+=`<div class="hitBlock">`;
+    out+=`ヒット ${h+1} / ${hitIndexes.length}　${hitLine+1}行目付近\n`;
+
+    for(let i=start;i<=end;i++){
+      const cls=i===hitLine?"hitLine":"normalLine";
+      const no=String(i+1).padStart(4," ");
+      out+=`<span class="${cls}">${no}: ${escapeHtml(lines[i])}</span>\n`;
+    }
+
+    const block=findBlockAroundHit(html,hitIndex);
+    if(block){
+      if(lastDetectedBlock==="")lastDetectedBlock=block.text;
+      out+=`<div class="blockTitle">検出：${block.type}</div>`;
+      out+=`<div class="blockCode">${escapeHtml(block.text)}</div>`;
+    }
+
+    out+=`</div>`;
+  }
+
+  preview.innerHTML=out;
+}
+
+function checkBeforeCode(){
+  const html=getSource();
+  const before=beforeBox.value;
+
+  if(html.trim()===""){
+    setLog("本体HTMLが空です");
+    preview.textContent="本体HTMLが空です";
+    return 0;
+  }
+
+  if(before===""){
+    setLog("差し替え前コードが空です");
+    preview.textContent="差し替え前コードが空です";
+    return 0;
+  }
+
+  const count=countHits(html,before);
+
+  if(count===0){
+    setLog("検索結果：0件\n\n本体HTML内に見つかりません。");
+    preview.textContent="ヒットなし";
+    return 0;
+  }
+
+  makeHitPreview(html,before);
+
+  if(count===1){
+    setLog("検索結果：1件\n\n差し替え可能です。");
+    return 1;
+  }
+
+  setLog("検索結果："+count+"件\n\n警告：複数ヒットしています。");
+  return count;
+}
+
+document.getElementById("loadFileBtn").addEventListener("click",function(){
+  const file=document.getElementById("fileInput").files[0];
+
+  if(!file){
+    setLog("読み込むファイルを選んでください");
+    return;
+  }
+
+  const reader=new FileReader();
+
+  reader.onload=function(e){
+    htmlBox.value=e.target.result;
+    resultBox.value="";
+    beforeBox.value="";
+    afterBox.value="";
+    preview.textContent="ファイル読込後。必要ならチェックしてください。";
+    setLog(file.name+" を本体HTMLへ読み込みました");
+  };
+
+  reader.readAsText(file,"UTF-8");
+});
+
+document.getElementById("clearHtmlBtn").addEventListener("click",function(){
+  htmlBox.value="";
+  preview.textContent="まだチェックしていません";
+  setLog("本体HTMLをクリアしました");
+});
+
+document.getElementById("clearBeforeBtn").addEventListener("click",function(){
+  beforeBox.value="";
+  preview.textContent="まだチェックしていません";
+  setLog("差し替え前をクリアしました");
+});
+
+document.getElementById("clearAfterBtn").addEventListener("click",function(){
+  afterBox.value="";
+  setLog("差し替え後をクリアしました");
+});
+
+document.getElementById("clearResultBtn").addEventListener("click",function(){
+  resultBox.value="";
+  preview.textContent="まだチェックしていません";
+  setLog("完成HTMLをクリアしました");
+});
+
+document.getElementById("checkBtn").addEventListener("click",function(){
+  checkBeforeCode();
+});
+
+document.getElementById("replaceBtn").addEventListener("click",function(){
+  const html=getSource();
+  const before=beforeBox.value;
+  const after=afterBox.value;
+
+  if(html.trim()===""){
+    setLog("本体HTMLが空です");
+    return;
+  }
+
+  if(before===""){
+    setLog("差し替え前コードが空です");
+    return;
+  }
+
+  const count=countHits(html,before);
+
+  if(count===0){
+    setLog("差し替え中止\n検索結果：0件");
+    preview.textContent="ヒットなし";
+    return;
+  }
+
+  saveHistory(html);
+
+  const result=html.split(before).join(after);
+  resultBox.value=result;
+  makeHitPreview(html,before);
+
+  setLog("差し替え完了\n置換件数: "+count+"件\n文字数: "+result.length);
+});
+
+document.getElementById("undoBtn").addEventListener("click",function(){
+  if(history.length===0){
+    setLog("戻せる履歴がありません");
+    return;
+  }
+
+  const prev=history.pop();
+  resultBox.value=prev;
+  preview.textContent="Undo後。必要なら再チェックしてください。";
+  setLog("一手戻しました\n文字数: "+prev.length);
+});
+
+document.getElementById("copyBlockBtn").addEventListener("click",function(){
+  if(lastDetectedBlock.trim()===""){
+    setLog("コピーする検出ブロックがありません");
+    return;
+  }
+
+  const temp=document.createElement("textarea");
+  temp.value=lastDetectedBlock;
+  document.body.appendChild(temp);
+  temp.focus();
+  temp.select();
+  temp.setSelectionRange(0,999999);
+
+  try{
+    document.execCommand("copy");
+    setLog("検出ブロックをコピーしました");
+  }catch(e){
+    setLog("コピーできませんでした。手動でコピーしてください");
+  }
+
+  document.body.removeChild(temp);
+});
+
+document.getElementById("copyBtn").addEventListener("click",function(){
+  if(resultBox.value.trim()===""){
+    setLog("コピーする完成HTMLがありません");
+    return;
+  }
+
+  resultBox.focus();
+  resultBox.select();
+  resultBox.setSelectionRange(0,999999);
+
+  try{
+    document.execCommand("copy");
+    setLog("完成HTMLをコピーしました");
+  }catch(e){
+    setLog("コピーできませんでした。手動で選択コピーしてください");
+  }
+});
+
+document.getElementById("promoteBtn").addEventListener("click",function(){
+  if(resultBox.value.trim()===""){
+    setLog("完成HTMLが空です");
+    return;
+  }
+
+  const html=resultBox.value;
+
+  htmlBox.value="";
+  beforeBox.value="";
+  afterBox.value="";
+  htmlBox.value=html;
+  resultBox.value="";
+  preview.textContent="まだチェックしていません";
+
+  setLog("完成HTMLを本体HTMLへ移動しました");
+});
+
+document.getElementById("downloadBtn").addEventListener("click",function(){
+
+  const html=getSource();
+
+  if(html.trim()===""){
+    setLog("保存するHTMLがありません");
+    return;
+  }
+
+  const blob=new Blob([html],{type:"text/html"});
+  const url=URL.createObjectURL(blob);
+
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="index.html";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  URL.revokeObjectURL(url);
+
+  setLog("完成HTMLを index.html として保存しました");
+});
+
+document.getElementById("htmlToRunBtn").addEventListener("click",function(){
+  if(htmlBox.value.trim()===""){
+    setLog("本体HTMLが空です");
+    return;
+  }
+
+  runBox.value=htmlBox.value;
+  setLog("本体HTMLを動作確認欄へ貼りました");
+});
+
+document.getElementById("resultToRunBtn").addEventListener("click",function(){
+  if(resultBox.value.trim()===""){
+    setLog("完成HTMLが空です");
+    return;
+  }
+
+  runBox.value=resultBox.value;
+  setLog("完成HTMLを動作確認欄へ貼りました");
+});
+
+document.getElementById("runBtn").addEventListener("click",function(){
+  const html=runBox.value;
+
+  if(html.trim()===""){
+    setLog("動作確認するHTMLが空です");
+    return;
+  }
+
+  document.getElementById("runFrame").srcdoc=html;
+  setLog("自由HTMLの動作確認を開始しました");
+});
+
+document.getElementById("clearRunBtn").addEventListener("click",function(){
+  runBox.value="";
+  document.getElementById("runFrame").srcdoc="";
+  setLog("動作確認HTMLをクリアしました");
+});
+</script>
+</body>
+</html>
