@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>KOUKI Engine Launcher Settings</title>
+<style>
+:root{
+  --panel:rgba(12,16,22,.88);
+  --line:rgba(255,255,255,.18);
+  --text:#f7f4e8;
+  --gold:#ffd166;
+  --blue:#7fc7ff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#07090d;color:var(--text);font-family:Arial,sans-serif;touch-action:manipulation}
+button,input{font-family:inherit}
+button{border:1px solid rgba(255,255,255,.22);border-radius:8px;color:#fff;background:#343a42;font-weight:700;touch-action:manipulation}
+button:active{transform:translateY(1px)}
+#stage{position:relative;width:100vw;height:100dvh;background:#07090d;overflow:hidden;display:flex;align-items:center;justify-content:center}
+
+/* RPG2.htmlから抜き出した起動画面 */
+#bootScreen{
+position:absolute;
+inset:0;
+z-index:100;
+background:#000;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+overflow:hidden;
+}
+.bootLogo{
+font-size:22px;
+font-weight:800;
+letter-spacing:1px;
+color:#777;
+position:relative;
+overflow:hidden;
+}
+.bootLogo::before{
+content:"KOUKI Engine presents";
+position:absolute;
+left:0;
+top:0;
+width:100%;
+height:100%;
+color:#ffd166;
+clip-path:inset(0 100% 0 0);
+animation:bootGoldSweep 2.2s ease-in-out forwards;
+text-shadow:0 0 10px #ffd166,0 0 22px #ff9f1c;
+}
+.bootLogoS{display:inline-block;}
+.bootLogoS.pop{animation:bootSPop .35s ease-out;}
+#bootBtn{
+width:140px;
+height:56px;
+margin-top:34px;
+font-size:20px;
+border:1px solid rgba(255,255,255,.35);
+background:#1d2430;
+opacity:0;
+pointer-events:none;
+transform:translateY(8px);
+transition:.45s;
+}
+#bootBtn.show{
+opacity:1;
+pointer-events:auto;
+transform:translateY(0);
+}
+@keyframes bootGoldSweep{0%{clip-path:inset(0 100% 0 0);}100%{clip-path:inset(0 0 0 0);}}
+@keyframes bootSPop{0%{transform:scale(1);}45%{transform:scale(1.35);color:#ffd166;text-shadow:0 0 18px #ffd166;}100%{transform:scale(1);}}
+
+.screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:14px;background:linear-gradient(#07090d,#101820);}
+.screen.open{display:flex;}
+.panel{width:min(94vw,430px);max-height:94dvh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:rgba(5,7,10,.84);box-shadow:0 0 22px rgba(0,0,0,.45);padding:16px;}
+.title{text-align:center;margin-bottom:12px;}
+.title h1{margin:0;color:var(--gold);font-size:24px;letter-spacing:2px;}
+.title p{margin:7px 0 0;font-size:12px;opacity:.75;}
+.gameList{display:grid;gap:10px;margin-top:14px;}
+.gameCard{border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.045);padding:10px;display:grid;grid-template-columns:1fr 80px;gap:8px;align-items:center;}
+.gameName{font-weight:800;font-size:15px;color:#fff;}
+.gameUrl{font-size:10px;color:#b9c7d8;margin-top:4px;word-break:break-all;opacity:.75;}
+.gameEmpty{font-size:12px;color:#999;margin-top:4px;}
+.playBtn{height:42px;background:#2f6f4e;}
+.playBtn:disabled{opacity:.35;background:#343a42;}
+.bottomBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.bottomBtns button{height:42px;}
+.settingRow{border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.045);padding:10px;margin-top:10px;}
+.settingRow label{display:block;font-size:12px;color:var(--gold);margin-bottom:5px;font-weight:700;}
+.settingRow input{width:100%;height:36px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:#111821;color:#fff;padding:0 9px;font-size:13px;}
+.settingRow input+label{margin-top:8px;}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.exportActions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px;}
+.exportActions button{height:46px;background:#7a4a9b;}
+.actions button{height:44px;}
+#saveSettingsBtn{background:#365d8c;}
+#exportHtmlBtn{background:#7a4a9b;}
+#backBtn{background:#333842;}
+.note{font-size:11px;line-height:1.55;color:#cfd7e2;opacity:.84;margin-top:10px;}
+.toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:rgba(0,0,0,.82);font-size:12px;opacity:0;pointer-events:none;transition:.25s;z-index:50;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bootScreen">
+    <div class="bootLogo" id="bootLogo">KOUKI Engine present<span class="bootLogoS" id="bootLogoS">s</span></div>
+    <button id="bootBtn">起動</button>
+  </div>
+
+  <div id="selectScreen" class="screen">
+    <div class="panel">
+      <div class="title">
+        <h1>GAME SELECT</h1>
+        <p>KOUKI Engine Launcher</p>
+      </div>
+      <div id="gameList" class="gameList"></div>
+      <div class="bottomBtns">
+        <button id="settingsBtn">ゲーム設定</button>
+        <button id="reloadBtn">再読込</button>
+      </div>
+      <div class="note">ゲーム設定で、ゲーム1〜ゲーム6にHTMLファイル名やURLを登録できます。例：<br>RPG2.html / igo.html / https://example.com/game.html</div>
+    </div>
+  </div>
+
+  <div id="settingsScreen" class="screen">
+    <div class="panel">
+      <div class="title">
+        <h1>GAME SETTINGS</h1>
+        <p>ゲーム名とURLを登録</p>
+      </div>
+      <div id="settingsList"></div>
+      <div class="actions">
+        <button id="backBtn">戻る</button>
+        <button id="saveSettingsBtn">保存</button>
+      </div>
+      <div class="exportActions">
+        <button id="exportHtmlBtn">保存内容でHTML書き出し</button>
+      </div>
+      <div class="note">同じフォルダにあるゲームなら「RPG2.html」のようにファイル名だけでOK。別サイトなら https:// から入力。<br>「HTML書き出し」を押すと、今のゲーム名とURLを埋め込んだ完成ランチャーを保存できます。</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+</div>
+
+<script>
+const SAVE_KEY="kouki_engine_launcher_games_v01";
+const DEFAULT_GAMES=[
+  {name:"ゲーム1",url:""},
+  {name:"ゲーム2",url:""},
+  {name:"ゲーム3",url:""},
+  {name:"ゲーム4",url:""},
+  {name:"ゲーム5",url:""},
+  {name:"ゲーム6",url:""}
+];
+let games=[];
+let audioCtx=null;
+
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s||"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]))}
+function showToast(text){const t=$("toast");t.textContent=text;t.classList.add("show");clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>t.classList.remove("show"),1500)}
+function getAudio(){try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume();return audioCtx}catch(e){return null}}
+function playNote(freq,start,len=0.14,vol=0.05){const ac=getAudio();if(!ac)return;const o=ac.createOscillator();const g=ac.createGain();o.type="square";o.frequency.setValueAtTime(freq,ac.currentTime+start);g.gain.setValueAtTime(0.001,ac.currentTime+start);g.gain.exponentialRampToValueAtTime(vol,ac.currentTime+start+0.01);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+start+len);o.connect(g);g.connect(ac.destination);o.start(ac.currentTime+start);o.stop(ac.currentTime+start+len+0.02)}
+function playBootChime(){playNote(880,0,0.18,0.08);playNote(1320,0.12,0.2,0.07);playNote(1760,0.24,0.25,0.06)}
+
+function loadGames(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    games=raw?JSON.parse(raw):DEFAULT_GAMES.map(g=>({...g}));
+  }catch(e){games=DEFAULT_GAMES.map(g=>({...g}));}
+  while(games.length<6)games.push({name:`ゲーム${games.length+1}`,url:""});
+  games=games.slice(0,6);
+}
+function saveGames(){localStorage.setItem(SAVE_KEY,JSON.stringify(games));}
+function openScreen(id){for(const el of document.querySelectorAll(".screen"))el.classList.remove("open");$(id).classList.add("open");}
+function renderSelect(){
+  const list=$("gameList");
+  list.innerHTML=games.map((g,i)=>{
+    const enabled=String(g.url||"").trim().length>0;
+    return `<div class="gameCard">
+      <div>
+        <div class="gameName">${esc(g.name||`ゲーム${i+1}`)}</div>
+        ${enabled?`<div class="gameUrl">${esc(g.url)}</div>`:`<div class="gameEmpty">未登録</div>`}
+      </div>
+      <button class="playBtn" data-play="${i}" ${enabled?"":"disabled"}>起動</button>
+    </div>`;
+  }).join("");
+  for(const btn of list.querySelectorAll("[data-play]")){
+    btn.onclick=()=>{
+      const g=games[Number(btn.dataset.play)];
+      const url=String(g.url||"").trim();
+      if(!url){showToast("URL未登録");return;}
+      location.href=url;
+    };
+  }
+}
+function renderSettings(){
+  const list=$("settingsList");
+  list.innerHTML=games.map((g,i)=>`<div class="settingRow">
+    <label>ゲーム${i+1} 名前</label>
+    <input data-name="${i}" value="${esc(g.name||`ゲーム${i+1}`)}" placeholder="ゲーム名">
+    <label>ゲーム${i+1} URL / HTMLファイル名</label>
+    <input data-url="${i}" value="${esc(g.url||"")}" placeholder="例：RPG2.html">
+  </div>`).join("");
+}
+
+function collectSettingsFromInputs(){
+  const next=DEFAULT_GAMES.map((_,i)=>({name:`ゲーム${i+1}`,url:""}));
+  for(const input of document.querySelectorAll("[data-name]"))next[Number(input.dataset.name)].name=input.value.trim()||`ゲーム${Number(input.dataset.name)+1}`;
+  for(const input of document.querySelectorAll("[data-url]"))next[Number(input.dataset.url)].url=input.value.trim();
+  games=next;
+  saveGames();
+}
+function launcherHtmlSource(){
+  const embedded=JSON.stringify(games).replace(/</g,"\\u003c");
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>KOUKI Engine Launcher</title>
+<style>
+:root{--panel:rgba(12,16,22,.88);--line:rgba(255,255,255,.18);--text:#f7f4e8;--gold:#ffd166;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#07090d;color:var(--text);font-family:Arial,sans-serif;touch-action:manipulation}
+button{border:1px solid rgba(255,255,255,.22);border-radius:8px;color:#fff;background:#343a42;font-weight:700;touch-action:manipulation}
+button:active{transform:translateY(1px)}
+#stage{position:relative;width:100vw;height:100dvh;background:#07090d;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#bootScreen{position:absolute;inset:0;z-index:100;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;overflow:hidden;}
+.bootLogo{font-size:22px;font-weight:800;letter-spacing:1px;color:#777;position:relative;overflow:hidden;}
+.bootLogo::before{content:"KOUKI Engine presents";position:absolute;left:0;top:0;width:100%;height:100%;color:#ffd166;clip-path:inset(0 100% 0 0);animation:bootGoldSweep 2.2s ease-in-out forwards;text-shadow:0 0 10px #ffd166,0 0 22px #ff9f1c;}
+.bootLogoS{display:inline-block}.bootLogoS.pop{animation:bootSPop .35s ease-out;}
+#bootBtn{width:140px;height:56px;margin-top:34px;font-size:20px;border:1px solid rgba(255,255,255,.35);background:#1d2430;opacity:0;pointer-events:none;transform:translateY(8px);transition:.45s;}
+#bootBtn.show{opacity:1;pointer-events:auto;transform:translateY(0);}
+@keyframes bootGoldSweep{0%{clip-path:inset(0 100% 0 0)}100%{clip-path:inset(0 0 0 0)}}
+@keyframes bootSPop{0%{transform:scale(1)}45%{transform:scale(1.35);color:#ffd166;text-shadow:0 0 18px #ffd166}100%{transform:scale(1)}}
+#selectScreen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:14px;background:linear-gradient(#07090d,#101820)}
+#selectScreen.open{display:flex}.panel{width:min(94vw,430px);max-height:94dvh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:rgba(5,7,10,.84);box-shadow:0 0 22px rgba(0,0,0,.45);padding:16px}.title{text-align:center;margin-bottom:12px}.title h1{margin:0;color:var(--gold);font-size:24px;letter-spacing:2px}.title p{margin:7px 0 0;font-size:12px;opacity:.75}.gameList{display:grid;gap:10px;margin-top:14px}.gameCard{border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.045);padding:10px;display:grid;grid-template-columns:1fr 80px;gap:8px;align-items:center}.gameName{font-weight:800;font-size:15px;color:#fff}.gameUrl{font-size:10px;color:#b9c7d8;margin-top:4px;word-break:break-all;opacity:.75}.gameEmpty{font-size:12px;color:#999;margin-top:4px}.playBtn{height:42px;background:#2f6f4e}.playBtn:disabled{opacity:.35;background:#343a42}.note{font-size:11px;line-height:1.55;color:#cfd7e2;opacity:.84;margin-top:12px;text-align:center}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bootScreen"><div class="bootLogo">KOUKI Engine present<span class="bootLogoS" id="bootLogoS">s</span></div><button id="bootBtn">起動</button></div>
+  <div id="selectScreen"><div class="panel"><div class="title"><h1>GAME SELECT</h1><p>KOUKI Engine Launcher</p></div><div id="gameList" class="gameList"></div><div class="note">©2026 KOUKI</div></div></div>
+</div>
+<script>
+const GAMES=${embedded};
+function esc(s){return String(s||"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
+function renderSelect(){const list=document.getElementById("gameList");list.innerHTML=GAMES.map((g,i)=>{const enabled=String(g.url||"").trim().length>0;return '<div class="gameCard"><div><div class="gameName">'+esc(g.name||('ゲーム'+(i+1)))+'</div>'+(enabled?'<div class="gameUrl">'+esc(g.url)+'</div>':'<div class="gameEmpty">未登録</div>')+'</div><button class="playBtn" data-play="'+i+'" '+(enabled?'':'disabled')+'>起動</button></div>'}).join("");for(const btn of list.querySelectorAll("[data-play]")){btn.onclick=()=>{const g=GAMES[Number(btn.dataset.play)];const url=String(g.url||"").trim();if(url)location.href=url;};}}
+let audioCtx=null;function getAudio(){try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume();return audioCtx}catch(e){return null}}function playNote(freq,start,len,vol){const ac=getAudio();if(!ac)return;const o=ac.createOscillator();const g=ac.createGain();o.type="square";o.frequency.setValueAtTime(freq,ac.currentTime+start);g.gain.setValueAtTime(0.001,ac.currentTime+start);g.gain.exponentialRampToValueAtTime(vol,ac.currentTime+start+0.01);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+start+len);o.connect(g);g.connect(ac.destination);o.start(ac.currentTime+start);o.stop(ac.currentTime+start+len+0.02)}function playBootChime(){playNote(880,0,0.18,0.08);playNote(1320,0.12,0.2,0.07);playNote(1760,0.24,0.25,0.06)}
+const bootBtn=document.getElementById("bootBtn");const bootLogoS=document.getElementById("bootLogoS");setTimeout(()=>{bootLogoS.classList.add("pop");setTimeout(()=>bootBtn.classList.add("show"),250)},2200);bootBtn.onclick=()=>{getAudio();playBootChime();document.getElementById("bootScreen").style.display="none";document.getElementById("selectScreen").classList.add("open");renderSelect();};
+</`+`script>
+</body>
+</html>`;
+}
+function exportLauncherHtml(){
+  collectSettingsFromInputs();
+  const html=launcherHtmlSource();
+  const blob=new Blob([html],{type:"text/html;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="kouki_launcher_export.html";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showToast("HTMLを書き出しました");
+}
+
+function bind(){
+  const bootBtn=$("bootBtn");
+  const bootLogoS=$("bootLogoS");
+  bootBtn.classList.remove("show");
+  setTimeout(()=>{bootLogoS.classList.add("pop");setTimeout(()=>bootBtn.classList.add("show"),250);},2200);
+  bootBtn.onclick=()=>{getAudio();playBootChime();$("bootScreen").style.display="none";openScreen("selectScreen");renderSelect();};
+  $("settingsBtn").onclick=()=>{renderSettings();openScreen("settingsScreen");};
+  $("reloadBtn").onclick=()=>{loadGames();renderSelect();showToast("再読込しました");};
+  $("backBtn").onclick=()=>{renderSelect();openScreen("selectScreen");};
+  $("saveSettingsBtn").onclick=()=>{
+    collectSettingsFromInputs();
+    renderSelect();
+    openScreen("selectScreen");
+    showToast("保存しました");
+  };
+  $("exportHtmlBtn").onclick=()=>{exportLauncherHtml();};
+}
+loadGames();
+bind();
+</script>
+</body>
+</html>
