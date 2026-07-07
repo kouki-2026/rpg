@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>KOUKI Barcode Battler v0.4.1 Registered Check</title>
+<title>KOUKI Barcode Battler v0.6.5 Spirit Pie</title>
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 <style>
 :root{
@@ -54,11 +54,264 @@ button{background:var(--gold);color:#111;font-weight:bold}
 #status{background:#05070c;padding:9px;border-radius:8px;min-height:44px;font-size:14px;white-space:pre-line}
 .dexItem{border-left:4px solid #41506f}.dexItem.body{border-left-color:#ffd166}.dexItem.weapon{border-left-color:#ef476f}.dexItem.armor{border-left-color:#3a86ff}
 .slotEmpty{opacity:.7;border-style:dashed}
+
+/* Dojo stable UI v0.5.9 */
+#dojoCenter{
+  min-height:96px;
+  background:#05070c;
+  border:1px dashed #445675;
+  border-radius:12px;
+  margin:8px 0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:10px;
+}
+#dojoCenterText{
+  font-size:24px;
+  font-weight:900;
+  color:var(--gold);
+  white-space:pre-line;
+  text-shadow:0 0 10px rgba(255,209,102,.45);
+}
+#dojoActionBar{
+  position:sticky;
+  bottom:0;
+  z-index:20;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  background:rgba(11,15,24,.92);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:8px;
+}
+#dojoActionBar button:disabled{
+  background:#3a3f4f!important;
+  color:#8b93a8!important;
+  opacity:.55;
+}
+.dojoActive{
+  border-color:var(--gold)!important;
+  box-shadow:0 0 12px rgba(255,209,102,.35);
+}
+
+
+/* Dojo attack text animation v0.6.0 */
+#dojoCenter{
+  position:relative;
+  overflow:visible;
+}
+.dojoFlyText{
+  position:absolute;
+  left:50%;
+  top:50%;
+  z-index:25;
+  transform:translate(-50%,-50%);
+  font-size:34px;
+  font-weight:900;
+  color:#fff;
+  text-shadow:0 0 12px #fff;
+  pointer-events:none;
+}
+.dojoFlyText.toEnemy{animation:dojoFlyUp .55s ease-in forwards}
+.dojoFlyText.toPlayer{animation:dojoFlyDown .55s ease-in forwards}
+.dojoDamage{
+  position:absolute;
+  right:18px;
+  top:18px;
+  z-index:30;
+  font-size:34px;
+  font-weight:900;
+  color:#ff5c7a;
+  text-shadow:0 0 10px rgba(255,92,122,.7);
+  animation:dojoDamageFloat .8s ease-out forwards;
+  pointer-events:none;
+}
+.dojoMiss{
+  position:absolute;
+  left:50%;
+  top:50%;
+  z-index:30;
+  transform:translate(-50%,-50%);
+  font-size:32px;
+  font-weight:900;
+  color:#b8c3df;
+  text-shadow:0 0 10px rgba(184,195,223,.7);
+  animation:dojoDamageFloat .8s ease-out forwards;
+  pointer-events:none;
+}
+.dojoHitShake{animation:dojoHitShake .25s linear}
+@keyframes dojoFlyUp{
+  from{transform:translate(-50%,-50%) scale(1);opacity:1}
+  to{transform:translate(-50%,-150px) scale(1.25);opacity:1}
+}
+@keyframes dojoFlyDown{
+  from{transform:translate(-50%,-50%) scale(1);opacity:1}
+  to{transform:translate(-50%,150px) scale(1.25);opacity:1}
+}
+@keyframes dojoDamageFloat{
+  from{transform:translateY(0) scale(1);opacity:1}
+  to{transform:translateY(-42px) scale(1.15);opacity:0}
+}
+@keyframes dojoHitShake{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-7px)}
+  50%{transform:translateX(7px)}
+  75%{transform:translateX(-5px)}
+}
+
+
+/* Dojo guard animation v0.6.1 */
+.dojoShield{
+  position:absolute;
+  left:0;
+  top:0;
+  right:0;
+  bottom:0;
+  z-index:26;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+.dojoShield.show{
+  display:flex;
+}
+.dojoShield::before{
+  content:"";
+  width:104px;
+  height:68px;
+  border:8px solid rgba(58,134,255,.95);
+  border-bottom-width:18px;
+  border-radius:72px 72px 24px 24px;
+  background:rgba(58,134,255,.18);
+  box-shadow:0 0 20px rgba(58,134,255,.85);
+  animation:dojoShieldPulse .32s ease-out;
+}
+.dojoFlyText.break{
+  animation:dojoBreakText .32s ease-out forwards;
+}
+@keyframes dojoShieldPulse{
+  0%{transform:scale(.75);opacity:.3}
+  100%{transform:scale(1);opacity:1}
+}
+@keyframes dojoBreakText{
+  0%{transform:translate(-50%,-50%) scale(1) rotate(0deg);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(1.8) rotate(18deg);opacity:0}
+}
+
+
+/* Shield position fix v0.6.2 */
+#dojoPlayer,
+#dojoEnemy{
+  position:relative;
+  overflow:hidden;
+}
+.dojoShield{
+  position:absolute;
+  left:0;
+  top:0;
+  right:0;
+  bottom:0;
+}
+
+
+/* Dodge animation v0.6.3 */
+.dojoDodgeLeft{
+  animation:dojoDodgeLeft .42s ease-in-out;
+}
+.dojoDodgeRight{
+  animation:dojoDodgeRight .42s ease-in-out;
+}
+@keyframes dojoDodgeLeft{
+  0%{transform:translateX(0)}
+  45%{transform:translateX(-120%)}
+  100%{transform:translateX(0)}
+}
+@keyframes dojoDodgeRight{
+  0%{transform:translateX(0)}
+  45%{transform:translateX(120%)}
+  100%{transform:translateX(0)}
+}
+
+
+/* Special attack animation v0.6.4 */
+.specialFlash{
+  animation:specialFlash .75s ease-in-out;
+}
+.dojoFlyText.special{
+  font-size:48px;
+  color:#ffd166;
+  text-shadow:0 0 18px #ffd166,0 0 26px #ef476f;
+}
+.dojoDamage.special{
+  color:#ffd166;
+  font-size:44px;
+  text-shadow:0 0 14px #ffd166,0 0 22px #ef476f;
+}
+#battleArena.specialShake{
+  animation:specialShake .35s linear;
+}
+@keyframes specialFlash{
+  0%,100%{color:var(--gold);transform:scale(1)}
+  35%{color:#ef476f;transform:scale(1.15)}
+  70%{color:#ffd166;transform:scale(1.05)}
+}
+@keyframes specialShake{
+  0%,100%{transform:translate(0,0)}
+  20%{transform:translate(-5px,3px)}
+  40%{transform:translate(5px,-3px)}
+  60%{transform:translate(-4px,-2px)}
+  80%{transform:translate(4px,2px)}
+}
+
+
+/* Spirit pie gauge v0.6.5 */
+.spiritWrap{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:6px;
+}
+.spiritPie{
+  width:42px;
+  height:42px;
+  filter:drop-shadow(0 0 6px rgba(0,255,102,.35));
+}
+.spiritPie .seg{
+  fill:#202632;
+  stroke:#46536c;
+  stroke-width:1.5;
+  transition:fill .22s ease, transform .22s ease;
+  transform-origin:50px 50px;
+}
+.spiritPie .seg.on{
+  fill:#00ff66;
+  stroke:#9affbf;
+}
+.spiritPie.full .seg.on{
+  fill:#ffd166;
+  stroke:#fff1a8;
+}
+.spiritPie.full{
+  animation:spiritFullPulse .9s ease-in-out infinite;
+}
+.spiritText{
+  font-size:13px;
+  color:#dbe7ff;
+}
+@keyframes spiritFullPulse{
+  0%,100%{filter:drop-shadow(0 0 6px rgba(255,209,102,.45))}
+  50%{filter:drop-shadow(0 0 14px rgba(255,209,102,.95))}
+}
+
 </style>
 </head>
 <body>
 <div id="app">
-<h1>バーコードバトラー v0.4.1</h1>
+<h1>バーコードバトラー v0.6.5</h1>
 
 <div id="screenMenu">
   <div class="box">
@@ -191,15 +444,19 @@ button{background:var(--gold);color:#111;font-weight:bold}
 
   <div class="box">
     <h3>バトル状態</h3>
-    <div id="dojoPlayer" class="card">プレイヤー未設定</div>
     <div id="dojoEnemy" class="card">敵未生成</div>
+    <div id="dojoCenter"><div id="dojoCenterText">未開始</div></div>
+    <div id="dojoPlayer" class="card">プレイヤー未設定</div>
     <div id="dojoTurn" class="card">未開始</div>
+
+    <div id="dojoActionBar">
+      <button id="dojoBtnAttack" onclick="dojoPlayerAction('attack')">⚔ 攻撃</button>
+      <button id="dojoBtnGuard" onclick="dojoPlayerAction('guard')">🛡 守る</button>
+      <button id="dojoBtnDodge" onclick="dojoPlayerAction('dodge')">💨 避ける</button>
+    </div>
   </div>
 
   <div class="box">
-    <h3>後手の行動</h3>
-    <button onclick="dojoAction('guard')">守る：ダメージ半分 / 気合い+1</button>
-    <button class="danger" onclick="dojoAction('dodge')">避ける：通常攻撃0 / 気合い-1</button>
     <button class="sub" onclick="dojoAutoTurn()">CPUで1ターン</button>
     <button class="sub" onclick="dojoAutoMany()">CPUで10ターン</button>
     <button class="danger" onclick="openDojo()">リセット</button>
@@ -666,6 +923,153 @@ function deleteCharacter(i){
 
 /* Dojo battle */
 let dojoP=null,dojoE=null,dojoAttacker=null,dojoDefender=null,dojoTurnCount=0,dojoGameOver=false;
+let dojoBusy=false;
+let dojoSpecialNow=false;
+
+
+function dojoSetCenter(t){
+  const el=document.getElementById("dojoCenterText");
+  if(el)el.textContent=t;
+}
+
+function dojoRole(){
+  if(!dojoP||!dojoE||!dojoAttacker||!dojoDefender)return "none";
+  if(dojoAttacker===dojoP)return "attack";
+  if(dojoDefender===dojoP)return "defense";
+  return "none";
+}
+
+function dojoUpdateButtons(){
+  const atk=document.getElementById("dojoBtnAttack");
+  const guard=document.getElementById("dojoBtnGuard");
+  const dodge=document.getElementById("dojoBtnDodge");
+  if(!atk||!guard||!dodge)return;
+
+  const base=dojoBusy||dojoGameOver||!dojoP||!dojoE||!dojoAttacker;
+  const role=dojoRole();
+
+  atk.disabled=base||role!=="attack";
+  guard.disabled=base||role!=="defense";
+  dodge.disabled=base||role!=="defense";
+}
+
+function dojoUpdateCenterByTurn(){
+  if(!dojoP||!dojoE||!dojoAttacker){
+    dojoSetCenter("未開始");
+    return;
+  }
+  if(dojoGameOver)return;
+
+  if(dojoAttacker===dojoP){
+    dojoSetCenter("自分の攻撃ターン\\n攻撃を選んでください");
+  }else{
+    dojoSetCenter("敵の攻撃ターン\\n守るか避けるを選んでください");
+  }
+}
+
+
+function dojoPanelOf(f){
+  return f===dojoP ? document.getElementById("dojoPlayer") : document.getElementById("dojoEnemy");
+}
+
+function dojoFlyAttackText(defender,guarded=false){
+  return new Promise(resolve=>{
+    const center=document.getElementById("dojoCenter");
+    if(!center){resolve();return;}
+    const el=document.createElement("div");
+    el.className="dojoFlyText "+(defender===dojoE?"toEnemy":"toPlayer")+(dojoSpecialNow?" special":"");
+    el.textContent="攻撃";
+    center.appendChild(el);
+
+    setTimeout(()=>{
+      if(guarded){
+        el.className="dojoFlyText break";
+        setTimeout(()=>{
+          el.remove();
+          resolve();
+        },330);
+      }else{
+        el.remove();
+        resolve();
+      }
+    },560);
+  });
+}
+
+function dojoShowShield(target,on){
+  document.querySelectorAll(".dojoShield").forEach(s=>{
+    if(!on)s.classList.remove("show");
+  });
+
+  const panel=dojoPanelOf(target);
+  if(!panel)return;
+  const sh=panel.querySelector(".dojoShield");
+  if(!sh)return;
+  sh.classList.toggle("show",!!on);
+}
+
+function dojoShowDamage(target,dmg){
+  const panel=dojoPanelOf(target);
+  if(!panel)return;
+  const el=document.createElement("div");
+  el.className="dojoDamage"+(dojoSpecialNow?" special":"");
+  el.textContent="-"+dmg;
+  panel.appendChild(el);
+  panel.classList.add("dojoHitShake");
+  setTimeout(()=>panel.classList.remove("dojoHitShake"),260);
+  setTimeout(()=>el.remove(),850);
+}
+
+
+
+function dojoSpecialStart(){
+  dojoSpecialNow=true;
+  const arena=document.getElementById("battleArena");
+  const c=document.getElementById("dojoCenterText");
+  if(arena)arena.classList.add("specialShake");
+  if(c)c.classList.add("specialFlash");
+  setTimeout(()=>{
+    if(arena)arena.classList.remove("specialShake");
+    if(c)c.classList.remove("specialFlash");
+  },760);
+}
+
+function dojoDodgeAnim(target){
+  return new Promise(resolve=>{
+    const panel=dojoPanelOf(target);
+    if(!panel){resolve();return;}
+    const cls=Math.random()<0.5?"dojoDodgeLeft":"dojoDodgeRight";
+    panel.classList.add(cls);
+    dojoSetCenter("💨\\n避ける！");
+    setTimeout(()=>{
+      panel.classList.remove(cls);
+      resolve();
+    },430);
+  });
+}
+
+function dojoShowMiss(){
+  const center=document.getElementById("dojoCenter");
+  if(!center)return;
+  const el=document.createElement("div");
+  el.className="dojoMiss";
+  el.textContent="MISS";
+  center.appendChild(el);
+  setTimeout(()=>el.remove(),850);
+}
+
+function dojoPlayerAction(action){
+  if(dojoBusy||dojoGameOver)return;
+  const role=dojoRole();
+  if(role==="attack" && action!=="attack")return;
+  if(role==="defense" && action==="attack")return;
+
+  if(role==="attack"){
+    dojoAction("guard"); // 敵の防御行動は内部でランダム処理
+  }else if(role==="defense"){
+    dojoAction(action);
+  }
+}
 
 function openDojo(){
   renderDojoCharSelect();
@@ -679,6 +1083,8 @@ function openDojo(){
   document.getElementById("dojoPlayer").innerHTML="プレイヤー未設定";
   document.getElementById("dojoEnemy").innerHTML="敵未生成";
   document.getElementById("dojoTurn").innerHTML="未開始";
+  dojoSetCenter("未開始");
+  dojoUpdateButtons();
   showOnly("screenDojo");
 }
 
@@ -769,6 +1175,8 @@ function dojoStartWithPlayer(){
   dojoLog(`${dojoP.name} vs ${dojoE.name}`);
   dojoDecide();
   dojoRender();
+  dojoUpdateCenterByTurn();
+  dojoUpdateButtons();
   showOnly("screenDojo");
 }
 
@@ -784,6 +1192,8 @@ function dojoNewEnemy(){
   dojoLog("新しい敵が出現！");
   dojoDecide();
   dojoRender();
+  dojoUpdateCenterByTurn();
+  dojoUpdateButtons();
 }
 
 function dojoResetTempoIfSame(){
@@ -814,27 +1224,79 @@ function dojoDecide(){
 }
 
 function dojoAction(defAction){
-  if(!dojoP||!dojoE){dojoUseCurrent();return}
-  if(dojoGameOver)return;
-
-  if(dojoAttacker.stumble){
-    dojoLog(`😵 ${dojoAttacker.name} はよろめいて動けない！`);
-    dojoAttacker.stumble=false;
-    dojoEndTurn();
+  if(!dojoP||!dojoE){
+    dojoUseCurrent();
     return;
   }
+  if(dojoGameOver||dojoBusy)return;
 
-  dojoAttack(dojoAttacker,dojoDefender,defAction);
-  dojoEndTurn();
+  const role=dojoRole();
+  if(role==="attack"){
+    dojoSetCenter("自分：攻撃！");
+  }else{
+    dojoSetCenter(defAction==="guard" ? "自分：守る！" : "自分：避ける！");
+  }
+
+  dojoBusy=true;
+  dojoUpdateButtons();
+
+  setTimeout(()=>{
+    if(dojoAttacker.stumble){
+      dojoLog(`😵 ${dojoAttacker.name} はよろめいて動けない！`);
+      dojoAttacker.stumble=false;
+      dojoSetCenter("よろめき！\n動けない");
+      dojoEndTurn();
+      dojoSpecialNow=false;
+      dojoBusy=false;
+      dojoUpdateButtons();
+      return;
+    }
+
+    // 敵が後手ならランダムで守る/避ける
+    if(dojoDefender===dojoE){
+      defAction=enemyDefenseChoice();
+      dojoSetCenter(defAction==="guard" ? "敵：守る！" : "敵：避ける！");
+    }
+
+    dojoSpecialNow = dojoAttacker && dojoAttacker.spirit>=5;
+    if(dojoSpecialNow){
+      dojoSetCenter("🔥\n必殺技！！");
+      dojoSpecialStart();
+    }
+
+    const guarded=(defAction==="guard");
+    const dodging=(defAction==="dodge");
+    if(guarded)dojoShowShield(dojoDefender,true);
+
+    const beforeFly = dodging ? dojoDodgeAnim(dojoDefender) : Promise.resolve();
+
+    beforeFly.then(()=>dojoFlyAttackText(dojoDefender,guarded)).then(()=>{
+      const beforeHp=dojoDefender.hp;
+      dojoAttack(dojoAttacker,dojoDefender,defAction);
+      const dmg=Math.max(0,beforeHp-dojoDefender.hp);
+      dojoRender();
+      if(dmg>0)dojoShowDamage(dojoDefender,dmg);
+      else dojoShowMiss();
+      dojoShowShield(dojoDefender,false);
+      dojoEndTurn();
+      dojoSpecialNow=false;
+      dojoBusy=false;
+      dojoUpdateButtons();
+    });
+  },450);
+}
+
+function enemyDefenseChoice(){
+  if(dojoDefender && dojoDefender.spirit<=-2)return "guard";
+  if(dojoAttacker && dojoAttacker.spirit>=5)return "guard";
+  return Math.random()<0.25 ? "dodge" : "guard";
 }
 
 function dojoAutoTurn(){
-  if(!dojoP||!dojoE){dojoUseCurrent();return}
-  if(dojoGameOver)return;
-  let action="guard";
-  if(dojoAttacker.spirit>=5)action="guard";
-  else if(dojoDefender.spirit>-2 && Math.random()<0.25)action="dodge";
-  dojoAction(action);
+  if(!dojoP||!dojoE)dojoUseCurrent();
+  if(dojoGameOver||dojoBusy)return;
+  if(dojoRole()==="attack")dojoAction("guard");
+  else dojoAction(enemyDefenseChoice());
 }
 
 function dojoAutoMany(){
@@ -902,20 +1364,53 @@ function dojoCheckStumble(p){
 }
 
 function dojoEndTurn(){
-  if(dojoGameOver){dojoRender();return}
+  if(dojoGameOver){
+    dojoRender();
+    dojoUpdateButtons();
+    return;
+  }
   dojoTurnCount++;
   dojoDecide();
   dojoRender();
+  dojoUpdateCenterByTurn();
+  dojoUpdateButtons();
 }
 
 function dojoRender(){
-  document.getElementById("dojoPlayer").innerHTML=dojoFighterHtml(dojoP);
-  document.getElementById("dojoEnemy").innerHTML=dojoFighterHtml(dojoE);
+  const pEl=document.getElementById("dojoPlayer");
+  const eEl=document.getElementById("dojoEnemy");
+  pEl.className="card"+(dojoAttacker===dojoP?" dojoActive":"");
+  eEl.className="card"+(dojoAttacker===dojoE?" dojoActive":"");
+  pEl.innerHTML=dojoFighterHtml(dojoP);
+  eEl.innerHTML=dojoFighterHtml(dojoE);
   document.getElementById("dojoTurn").innerHTML=
     `<div class="big">攻撃権：${dojoAttacker?escapeHtml(dojoAttacker.name):"-"}</div>
     後手：${dojoDefender?escapeHtml(dojoDefender.name):"-"}<br>
     <span class="badge">ターン ${dojoTurnCount+1}</span>
     <span class="badge">後手は守る or 避ける</span>`;
+}
+
+
+function spiritGauge(n){
+  n=Math.max(0,Math.min(5,Number(n)||0));
+  const pts=[
+    "50,50 50,5 92.8,36.1",
+    "50,50 92.8,36.1 76.5,86.4",
+    "50,50 76.5,86.4 23.5,86.4",
+    "50,50 23.5,86.4 7.2,36.1",
+    "50,50 7.2,36.1 50,5"
+  ];
+  let segs="";
+  for(let i=0;i<5;i++){
+    segs+=`<polygon class="seg ${i<n?"on":""}" points="${pts[i]}"></polygon>`;
+  }
+  return `<div class="spiritWrap">
+    <svg class="spiritPie ${n>=5?"full":""}" viewBox="0 0 100 100" aria-label="気合い${n}/5">
+      ${segs}
+      <circle cx="50" cy="50" r="11" fill="#0d1322" stroke="#7c8aa8" stroke-width="2"></circle>
+    </svg>
+    <div class="spiritText">気合い ${n}/5${n>=5?"<br>🔥必殺可能":""}</div>
+  </div>`;
 }
 
 function dojoFighterHtml(p){
@@ -928,8 +1423,10 @@ function dojoFighterHtml(p){
   武器重さ ${p.weaponWeight} / 防具重さ ${p.armorWeight}<br>
   <span class="badge">テンポ ${p.tempo}/${p.tempoMax}</span>
   <span class="badge">命中 ${p.hit}%</span>
-  <span class="badge">気合い ${p.spirit}</span>
-  ${p.stumble?'<span class="badge">よろめき</span>':''}`;
+  ${spiritGauge(p.spirit)}
+  ${p.stumble?'<span class="badge">よろめき</span>':''}
+  <div class="dojoShield"></div>`;
+  dojoUpdateButtons();
 }
 
 function dojoLog(t){
