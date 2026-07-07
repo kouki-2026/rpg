@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>KOUKI Barcode Battler v0.4.1 Registered Check</title>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+<style>
+:root{
+  --bg:#0b0f18;
+  --panel:#141b2d;
+  --line:#2d3b5c;
+  --gold:#ffd166;
+  --blue:#3a86ff;
+  --red:#ef476f;
+  --green:#00ff66;
+  --text:#f7f4e8;
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  width:100%;
+  min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+  overflow-x:hidden;
+  overscroll-behavior:none;
+}
+#app{width:min(100vw,430px);margin:0 auto;padding:12px}
+h1{margin:8px 0 12px;text-align:center;color:var(--gold);font-size:22px}
+h2,h3{margin:8px 0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+button,input,select{width:100%;border:0;border-radius:9px;padding:11px;margin:6px 0;font-size:16px}
+button{background:var(--gold);color:#111;font-weight:bold}
+.sub{background:var(--blue);color:#fff}.danger{background:var(--red);color:#fff}.ghost{background:#27324e;color:#fff}
+.hidden{display:none!important}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.card{background:#0d1322;border:1px solid #41506f;border-radius:10px;padding:10px;margin:8px 0}
+.small{color:#b8c3df;font-size:13px;line-height:1.45}
+.big{font-size:20px;font-weight:900}
+.badge{display:inline-block;padding:3px 7px;border:1px solid #41506f;border-radius:999px;margin:2px;font-size:12px;background:#08101f}
+.result{background:#07100b;border:1px solid #155c35;border-radius:10px;padding:12px;font-size:20px;letter-spacing:1px;word-break:break-all}
+#cameraWrap{position:relative;width:100%;height:330px;background:#05070c;border:1px solid #334;border-radius:10px;overflow:hidden;touch-action:none;user-select:none}
+#videoLayer{position:absolute;left:50%;top:50%;transform-origin:center center;will-change:transform}
+#video{display:block;width:430px;height:330px;object-fit:cover;background:#000;user-select:none;pointer-events:none}
+.mask{position:absolute;background:rgba(0,0,0,.58);pointer-events:none;z-index:3}
+#maskTop{left:0;right:0;top:0;height:38%}#maskBottom{left:0;right:0;bottom:0;height:38%}
+#maskLeft{left:0;top:38%;bottom:38%;width:5%}#maskRight{right:0;top:38%;bottom:38%;width:5%}
+#guide{position:absolute;left:5%;right:5%;top:38%;height:24%;border:3px solid var(--green);border-radius:8px;box-shadow:0 0 12px var(--green) inset;pointer-events:none;z-index:4}
+#guide:before{content:"ここにバーコードを合わせる";position:absolute;left:8px;top:-25px;color:var(--green);font-size:12px}
+#centerLine{position:absolute;left:8%;right:8%;top:50%;height:2px;background:var(--green);opacity:.85;z-index:5;pointer-events:none}
+#okFlash{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:10;background:rgba(0,0,0,.45);color:#00ff66;font-size:64px;font-weight:900;text-shadow:0 0 18px #00ff66;pointer-events:none}
+#status{background:#05070c;padding:9px;border-radius:8px;min-height:44px;font-size:14px;white-space:pre-line}
+.dexItem{border-left:4px solid #41506f}.dexItem.body{border-left-color:#ffd166}.dexItem.weapon{border-left-color:#ef476f}.dexItem.armor{border-left-color:#3a86ff}
+.slotEmpty{opacity:.7;border-style:dashed}
+</style>
+</head>
+<body>
+<div id="app">
+<h1>バーコードバトラー v0.4.1</h1>
+
+<div id="screenMenu">
+  <div class="box">
+    <h2>メニュー</h2>
+    <button onclick="openRegister('body')">本体を登録</button>
+    <button onclick="openRegister('weapon')">武器を登録</button>
+    <button onclick="openRegister('armor')">防具を登録</button>
+    <button class="sub" onclick="openCharacterSetup()">キャラ設定</button>
+    <button class="sub" onclick="openDojo()">道場：練習バトル</button>
+    <button class="sub" onclick="openDex()">図鑑を見る</button>
+  </div>
+  <div class="box">
+    <h3>仕様</h3>
+    <div class="small">
+      バーコードを1回登録すると、本体・武器・防具の3種類を図鑑に作ります。<br>
+      キャラ設定では、同じバーコードを本体・武器・防具に重複セットできません。
+    </div>
+  </div>
+</div>
+
+<div id="screenRegister" class="hidden">
+  <div class="box">
+    <h2 id="regTitle">登録</h2>
+    <div class="small">
+      カメラ映像は1本指で移動、2本指で拡大縮小＋回転できます。<br>
+      緑枠だけを読み取り、同じ数字を3回確認したらOKです。
+    </div>
+
+    <div id="cameraWrap">
+      <div id="videoLayer"><video id="video" autoplay playsinline muted></video></div>
+      <div id="maskTop" class="mask"></div><div id="maskBottom" class="mask"></div>
+      <div id="maskLeft" class="mask"></div><div id="maskRight" class="mask"></div>
+      <div id="guide"></div><div id="centerLine"></div><div id="okFlash">OK!</div>
+    </div>
+
+    <button onclick="startCamera()">カメラ開始</button>
+    <div class="row"><button class="sub" onclick="startAutoScan()">自動読み取り</button><button class="sub" onclick="scanOnce()">1回だけ読む</button></div>
+    <div class="row"><button class="danger" onclick="stopAutoScan()">読取停止</button><button class="danger" onclick="stopCamera()">カメラ停止</button></div>
+
+    <div class="row"><button class="ghost" onclick="zoomIn()">拡大</button><button class="ghost" onclick="zoomOut()">縮小</button></div>
+    <div class="row3"><button class="ghost" onclick="rotateLeft()">左90°</button><button class="ghost" onclick="rotateRight()">右90°</button><button class="ghost" onclick="rotateFine()">微回転</button></div>
+    <button class="ghost" onclick="resetView()">位置リセット</button>
+
+    <div>
+      <span class="badge" id="scaleBadge">拡大: 1.00</span>
+      <span class="badge" id="rotBadge">回転: 0°</span>
+      <span class="badge" id="countBadge">確認: 0/3</span>
+    </div>
+    <div id="status">カメラ開始からスタート</div>
+  </div>
+
+  <div class="box">
+    <h3>読み取り結果 / 手入力</h3>
+    <div id="readResult" class="result">未読み取り</div>
+    <div id="registeredStatus" class="card small">未確認</div>
+    <input id="barcodeInput" placeholder="バーコード数字">
+    <input id="nameInput" placeholder="名前（自由入力）">
+    <button onclick="previewGenerate()">能力を生成</button>
+    <button onclick="saveCurrent()">保存する</button>
+    <button class="sub" onclick="setScannedToCharacter()">この読み取り結果をキャラ設定へ使う</button>
+    <button class="danger" onclick="backMenu()">戻る</button>
+  </div>
+
+  <div class="box">
+    <h3>生成結果</h3>
+    <div id="previewBox" class="card">未生成</div>
+  </div>
+</div>
+
+<div id="screenCharacter" class="hidden">
+  <div class="box">
+    <h2>キャラ設定</h2>
+    <input id="charName" placeholder="キャラ名">
+    <div id="bodySlot" class="card slotEmpty">本体：未設定</div>
+    <div class="row">
+      <button onclick="openPickForSlot('body')">図鑑から本体</button>
+      <button class="sub" onclick="scanForSlot('body')">読み取りで本体</button>
+    </div>
+
+    <div id="weaponSlot" class="card slotEmpty">武器：未設定</div>
+    <div class="row">
+      <button onclick="openPickForSlot('weapon')">図鑑から武器</button>
+      <button class="sub" onclick="scanForSlot('weapon')">読み取りで武器</button>
+    </div>
+
+    <div id="armorSlot" class="card slotEmpty">防具：未設定</div>
+    <div class="row">
+      <button onclick="openPickForSlot('armor')">図鑑から防具</button>
+      <button class="sub" onclick="scanForSlot('armor')">読み取りで防具</button>
+    </div>
+
+    <h3>合計能力</h3>
+    <div id="charTotal" class="card">未完成</div>
+    <button onclick="saveCharacter()">キャラ設定を保存</button>
+    <button class="sub" onclick="openCharacters()">保存キャラ一覧</button>
+    <button class="sub" onclick="dojoUseCurrent()">このキャラで道場へ</button>
+    <button class="danger" onclick="backMenu()">戻る</button>
+  </div>
+</div>
+
+<div id="screenPick" class="hidden">
+  <div class="box">
+    <h2 id="pickTitle">図鑑から選択</h2>
+    <input id="pickSearch" placeholder="検索" oninput="renderPickList()">
+    <div id="pickList"></div>
+    <button class="danger" onclick="openCharacterSetup()">戻る</button>
+  </div>
+</div>
+
+<div id="screenCharacters" class="hidden">
+  <div class="box">
+    <h2>保存キャラ一覧</h2>
+    <div id="charList"></div>
+    <button class="danger" onclick="openCharacterSetup()">戻る</button>
+  </div>
+</div>
+
+
+<div id="screenDojo" class="hidden">
+  <div class="box">
+    <h2>道場：練習バトル</h2>
+    <div class="small">
+      保存キャラまたは現在のキャラ設定で、ランダム生成された敵とバトル練習できます。<br>
+      後手側は「守る」か「避ける」を選びます。
+    </div>
+    <select id="dojoCharSelect" onchange="dojoLoadSelected()"></select>
+    <button onclick="dojoUseCurrent()">現在のキャラ設定で挑む</button>
+    <button class="sub" onclick="dojoNewEnemy()">ランダム敵生成</button>
+  </div>
+
+  <div class="box">
+    <h3>バトル状態</h3>
+    <div id="dojoPlayer" class="card">プレイヤー未設定</div>
+    <div id="dojoEnemy" class="card">敵未生成</div>
+    <div id="dojoTurn" class="card">未開始</div>
+  </div>
+
+  <div class="box">
+    <h3>後手の行動</h3>
+    <button onclick="dojoAction('guard')">守る：ダメージ半分 / 気合い+1</button>
+    <button class="danger" onclick="dojoAction('dodge')">避ける：通常攻撃0 / 気合い-1</button>
+    <button class="sub" onclick="dojoAutoTurn()">CPUで1ターン</button>
+    <button class="sub" onclick="dojoAutoMany()">CPUで10ターン</button>
+    <button class="danger" onclick="openDojo()">リセット</button>
+    <button class="danger" onclick="backMenu()">戻る</button>
+  </div>
+
+  <div class="box">
+    <h3>ログ</h3>
+    <div id="dojoLog" class="card" style="height:220px;overflow:auto;white-space:pre-line;font-size:13px;background:#05070c"></div>
+  </div>
+</div>
+
+<div id="screenDex" class="hidden">
+  <div class="box">
+    <h2>図鑑</h2>
+    <select id="dexFilter" onchange="renderDex()">
+      <option value="all">全部</option>
+      <option value="favorite">お気に入り</option>
+      <option value="body">本体</option>
+      <option value="weapon">武器</option>
+      <option value="armor">防具</option>
+    </select>
+    <input id="dexSearch" placeholder="名前・バーコード検索" oninput="renderDex()">
+    <div id="dexList"></div>
+    <button class="danger" onclick="backMenu()">戻る</button>
+  </div>
+</div>
+</div>
+
+<script>
+const SAVE_KEY="kouki_barcode_battler_db";
+const CHAR_KEY="kouki_barcode_battler_chars";
+const OLD_DB_KEYS=[
+  "kouki_barcode_battler_v02_db",
+  "kouki_barcode_battler_v03_db"
+];
+const OLD_CHAR_KEYS=[
+  "kouki_barcode_battler_v03_chars"
+];
+
+function migrateStorage(){
+  if(!localStorage.getItem(SAVE_KEY)){
+    for(const k of OLD_DB_KEYS){
+      const v=localStorage.getItem(k);
+      if(v){
+        localStorage.setItem(SAVE_KEY,v);
+        break;
+      }
+    }
+  }
+  if(!localStorage.getItem(CHAR_KEY)){
+    for(const k of OLD_CHAR_KEYS){
+      const v=localStorage.getItem(k);
+      if(v){
+        localStorage.setItem(CHAR_KEY,v);
+        break;
+      }
+    }
+  }
+}
+migrateStorage();
+let currentMode="body";
+let currentItem=null;
+let pickSlot="body";
+let character={body:null,weapon:null,armor:null};
+
+let stream=null,scanning=false,scanTimer=null,zxingReader=null;
+let posX=0,posY=0,scale=1,rotation=0;
+let activePointers=new Map(),lastSingleX=0,lastSingleY=0;
+let pinchStartDist=0,pinchStartAngle=0,pinchStartScale=1,pinchStartRotation=0;
+let pinchStartCenter={x:0,y:0},pinchStartPos={x:0,y:0};
+let scanCounts={},lastConfirmed="";
+const ACCEPT_COUNT=3;
+
+const screenMenu=document.getElementById("screenMenu");
+const screenRegister=document.getElementById("screenRegister");
+const screenDex=document.getElementById("screenDex");
+const screenCharacter=document.getElementById("screenCharacter");
+const screenPick=document.getElementById("screenPick");
+const screenCharacters=document.getElementById("screenCharacters");
+const screenDojo=document.getElementById("screenDojo");
+const cameraWrap=document.getElementById("cameraWrap");
+const videoLayer=document.getElementById("videoLayer");
+const video=document.getElementById("video");
+const statusEl=document.getElementById("status");
+const okFlash=document.getElementById("okFlash");
+
+function showOnly(id){
+  [screenMenu,screenRegister,screenDex,screenCharacter,screenPick,screenCharacters,screenDojo].forEach(s=>s.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+function backMenu(){stopAutoScan();showOnly("screenMenu")}
+function typeName(t){return t==="body"?"本体":t==="weapon"?"武器":t==="armor"?"防具":t}
+
+function getDB(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||"[]")}catch(_){return []}}
+function setDB(db){localStorage.setItem(SAVE_KEY,JSON.stringify(db))}
+function getChars(){try{return JSON.parse(localStorage.getItem(CHAR_KEY)||"[]")}catch(_){return []}}
+function setChars(cs){localStorage.setItem(CHAR_KEY,JSON.stringify(cs))}
+
+function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function rnd(seed,min,max){return min+(seed%(max-min+1))}
+function normalizeBarcode(text){return String(text||"").replace(/\D/g,"")}
+function isSupportedLength(code){return /^[0-9]{8}$|^[0-9]{12}$|^[0-9]{13}$/.test(code)}
+function jan13Check(code){
+  if(!/^[0-9]{13}$/.test(code))return null;
+  let sum=0;for(let i=0;i<12;i++){const n=Number(code[i]);sum+=(i%2===0)?n:n*3}
+  return ((10-(sum%10))%10)===Number(code[12])
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+function generateItem(code,mode,name){
+  const h=hash(code+"|"+mode);
+  const rare=90+(h%21);
+  const item={type:mode,barcode:code,name:name||code,rare,favorite:false,createdAt:new Date().toISOString()};
+  if(mode==="body"){
+    item.hp=rnd(hash(code+"hp"),500,1000);
+    item.spd=1500-item.hp;
+    const total=rare;
+    item.baseAtk=rnd(hash(code+"atk"),0,total);
+    item.baseDef=total-item.baseAtk;
+  }else if(mode==="weapon"){
+    item.atk=rnd(hash(code+"weapon"),100,300);
+    item.weight=item.atk;
+  }else{
+    item.def=rnd(hash(code+"armor"),50,100);
+    item.weight=item.def;
+  }
+  return item;
+}
+
+function makeKey(code,type){
+  return code+"|"+type;
+}
+
+function findItem(code,mode){
+  return getDB().find(x=>x.barcode===code && x.type===mode);
+}
+
+function getRegisteredByBarcode(code){
+  return getDB().filter(x=>x.barcode===code);
+}
+
+function updateRegisteredStatus(code){
+  const el=document.getElementById("registeredStatus");
+  if(!el)return;
+
+  code=normalizeBarcode(code);
+  if(!code){
+    el.textContent="未確認";
+    return;
+  }
+
+  const items=getRegisteredByBarcode(code);
+  if(!items.length){
+    el.innerHTML="NEW：このバーコードは未登録です。保存すると本体・武器・防具をまとめて登録します。";
+    return;
+  }
+
+  const names=[...new Set(items.map(x=>x.name||x.barcode))].join(" / ");
+  const types=items.map(x=>typeName(x.type)).join("・");
+  el.innerHTML=`登録済み：${escapeHtml(names)}<br>${types} が図鑑にあります。保存しても名前は上書きしません。`;
+}
+
+function registerAllTypes(code,name){
+  let db=getDB();
+  const types=["body","weapon","armor"];
+  const created=[];
+  const alreadyExists=db.some(x=>x.barcode===code);
+
+  for(const t of types){
+    const idx=db.findIndex(x=>x.barcode===code && x.type===t);
+    if(idx>=0){
+      // 登録済みの場合は名前を上書きしない
+      created.push(db[idx]);
+    }else{
+      const item=generateItem(code,t,name||code);
+      if(alreadyExists){
+        const existing=db.find(x=>x.barcode===code && x.name);
+        if(existing)item.name=existing.name;
+      }
+      db.push(item);
+      created.push(item);
+    }
+  }
+  setDB(db);
+  return created;
+}
+
+function findOrCreateFromCode(code,mode,name){
+  registerAllTypes(code,name||code);
+  return findItem(code,mode);
+}
+
+function openRegister(mode){
+  currentMode=mode;currentItem=null;
+  document.getElementById("regTitle").textContent={body:"本体登録",weapon:"武器登録",armor:"防具登録"}[mode];
+  document.getElementById("barcodeInput").value="";
+  document.getElementById("nameInput").value="";
+  document.getElementById("readResult").textContent="未読み取り";
+  document.getElementById("registeredStatus").textContent="未確認";
+  document.getElementById("previewBox").innerHTML="未生成";
+  scanCounts={};
+  lastConfirmed="";
+  document.getElementById("countBadge").textContent="確認: 0/3";
+  showOnly("screenRegister");
+}
+function previewGenerate(){
+  const code=normalizeBarcode(document.getElementById("barcodeInput").value);
+  if(!code){alert("バーコードを入力または読み取りしてください。");return}
+
+  updateRegisteredStatus(code);
+
+  const existing=findItem(code,currentMode);
+  if(existing){
+    currentItem=existing;
+    document.getElementById("nameInput").value=existing.name||code;
+    document.getElementById("previewBox").innerHTML=
+      `<div class="big">図鑑に登録済み</div>`+
+      `<div class="card dexItem ${existing.type}">${itemHtml(existing,true)}</div>`;
+    return;
+  }
+
+  const name=document.getElementById("nameInput").value.trim()||code;
+  currentItem=generateItem(code,currentMode,name);
+  document.getElementById("previewBox").innerHTML=itemHtml(currentItem,true);
+}
+function saveCurrent(){
+  const code=normalizeBarcode(document.getElementById("barcodeInput").value);
+  if(!code){alert("バーコードを入力または読み取りしてください。");return}
+  const name=document.getElementById("nameInput").value.trim()||code;
+
+  const wasRegistered=getRegisteredByBarcode(code).length>0;
+  const created=registerAllTypes(code,name);
+  currentItem=created.find(x=>x.type===currentMode)||created[0];
+
+  updateRegisteredStatus(code);
+
+  document.getElementById("previewBox").innerHTML=
+    `<div class="big">${wasRegistered?"図鑑に登録済みです":"3種類まとめて保存しました"}</div>`+
+    created.map(x=>`<div class="card dexItem ${x.type}">${itemHtml(x,true)}</div>`).join("");
+
+  alert(wasRegistered ? "登録済みデータを表示しました。名前は上書きしていません。" : "本体・武器・防具をまとめて保存しました。");
+}
+function slotDuplicateCheck(code,slot){
+  for(const s of ["body","weapon","armor"]){
+    if(s!==slot && character[s] && character[s].barcode===code){
+      alert("このバーコードは既にキャラ設定の「"+typeName(s)+"」で使っています。");
+      return false;
+    }
+  }
+  return true;
+}
+
+function setScannedToCharacter(){
+  const code=normalizeBarcode(document.getElementById("barcodeInput").value);
+  if(!code){alert("バーコードがありません。");return}
+  if(!slotDuplicateCheck(code,currentMode))return;
+
+  const name=document.getElementById("nameInput").value.trim()||code;
+  const item=findOrCreateFromCode(code,currentMode,name);
+  if(!item)return;
+  character[currentMode]=item;
+  openCharacterSetup();
+}
+
+function itemHtml(item,showType){
+  let html=`<div class="big">${item.favorite?"⭐ ":""}${escapeHtml(item.name)}</div>`;
+  if(showType)html+=`<span class="badge">${typeName(item.type)}</span>`;
+  html+=`<span class="badge">${item.barcode}</span><br>`;
+  if(item.type==="body")html+=`HP ${item.hp}<br>速度 ${item.spd}<br>基本攻撃 ${item.baseAtk}<br>基本防御 ${item.baseDef}`;
+  else if(item.type==="weapon")html+=`攻撃力 ${item.atk}<br>重さ ${item.weight}<br><span class="small">重さは命中率に影響</span>`;
+  else html+=`守備力 ${item.def}<br>重さ ${item.weight}<br><span class="small">重さは攻撃回数に影響</span>`;
+  return html;
+}
+
+function openDex(){renderDex();showOnly("screenDex")}
+function renderDex(){
+  const filter=document.getElementById("dexFilter").value;
+  const q=document.getElementById("dexSearch").value.trim().toLowerCase();
+  const list=document.getElementById("dexList");
+  let db=getDB();
+  if(filter==="favorite")db=db.filter(x=>x.favorite);else if(filter!=="all")db=db.filter(x=>x.type===filter);
+  if(q)db=db.filter(x=>String(x.name).toLowerCase().includes(q)||String(x.barcode).includes(q));
+  list.innerHTML="";
+  if(!db.length){list.innerHTML='<div class="card small">まだ登録がありません。</div>';return}
+  const all=getDB();
+  db.forEach(item=>{
+    const realIndex=all.findIndex(x=>x.barcode===item.barcode && x.type===item.type);
+    const div=document.createElement("div");
+    div.className="card dexItem "+item.type;
+    div.innerHTML=itemHtml(item,true)+`
+      <div class="row">
+        <button class="sub" onclick="toggleFav(${realIndex})">${item.favorite?"⭐解除":"⭐お気に入り"}</button>
+        <button class="ghost" onclick="renameItem(${realIndex})">名前変更</button>
+      </div>
+      <button class="danger" onclick="deleteItem(${realIndex})">削除</button>`;
+    list.appendChild(div);
+  });
+}
+function toggleFav(i){const db=getDB();if(!db[i])return;db[i].favorite=!db[i].favorite;setDB(db);renderDex();if(!screenPick.classList.contains("hidden"))renderPickList()}
+function renameItem(i){const db=getDB();if(!db[i])return;const n=prompt("新しい名前",db[i].name);if(n===null)return;db[i].name=n.trim()||db[i].barcode;setDB(db);renderDex()}
+function deleteItem(i){const db=getDB();if(!db[i])return;if(!confirm("削除しますか？"))return;db.splice(i,1);setDB(db);renderDex()}
+
+/* Character setup */
+function openCharacterSetup(){
+  renderCharacter();
+  showOnly("screenCharacter");
+}
+function scanForSlot(slot){
+  currentMode=slot;
+  openRegister(slot);
+}
+function openPickForSlot(slot){
+  pickSlot=slot;
+  document.getElementById("pickTitle").textContent="図鑑から"+typeName(slot)+"を選択";
+  document.getElementById("pickSearch").value="";
+  renderPickList();
+  showOnly("screenPick");
+}
+function renderPickList(){
+  const q=document.getElementById("pickSearch").value.trim().toLowerCase();
+  const list=document.getElementById("pickList");
+  let db=getDB().filter(x=>x.type===pickSlot);
+  if(q)db=db.filter(x=>String(x.name).toLowerCase().includes(q)||String(x.barcode).includes(q));
+  list.innerHTML="";
+  if(!db.length){list.innerHTML='<div class="card small">この種類の登録がありません。</div>';return}
+  db.forEach(item=>{
+    const div=document.createElement("div");
+    div.className="card dexItem "+item.type;
+    div.innerHTML=itemHtml(item,true)+`<button onclick="selectForSlot('${item.barcode}')">これをセット</button>`;
+    list.appendChild(div);
+  });
+}
+function selectForSlot(barcode){
+  if(!slotDuplicateCheck(barcode,pickSlot))return;
+  const item=getDB().find(x=>x.barcode===barcode && x.type===pickSlot);
+  if(!item)return;
+  character[pickSlot]=item;
+  openCharacterSetup();
+}
+function renderCharacter(){
+  renderSlot("bodySlot","body");
+  renderSlot("weaponSlot","weapon");
+  renderSlot("armorSlot","armor");
+  renderTotal();
+}
+function renderSlot(id,slot){
+  const el=document.getElementById(id);
+  const item=character[slot];
+  if(!item){
+    el.className="card slotEmpty";
+    el.innerHTML=typeName(slot)+"：未設定";
+  }else{
+    el.className="card dexItem "+slot;
+    el.innerHTML=itemHtml(item,true)+`<button class="danger" onclick="clearSlot('${slot}')">外す</button>`;
+  }
+}
+function clearSlot(slot){
+  character[slot]=null;
+  renderCharacter();
+}
+function calcCharacterStats(){
+  if(!character.body)return null;
+  const b=character.body,w=character.weapon,a=character.armor;
+  const atk=b.baseAtk+(w?w.atk:0);
+  const def=b.baseDef+(a?a.def:0);
+  const weaponWeight=w?w.weight:0;
+  const armorWeight=a?a.weight:0;
+  const totalWeight=weaponWeight+armorWeight;
+  const hitBase=weaponWeight>0?Math.max(20,Math.min(100,Math.floor(10000/weaponWeight))):100;
+  return {
+    hp:b.hp,
+    spd:b.spd,
+    atk,def,
+    weaponWeight,armorWeight,totalWeight,
+    hitBase
+  };
+}
+function renderTotal(){
+  const box=document.getElementById("charTotal");
+  const st=calcCharacterStats();
+  if(!st){
+    box.innerHTML="本体をセットすると合計能力を表示します。";
+    return;
+  }
+  box.innerHTML=`<div class="big">${escapeHtml(document.getElementById("charName").value||"未命名キャラ")}</div>
+  HP ${st.hp}<br>
+  速度 ${st.spd}<br>
+  合計攻撃 ${st.atk}<br>
+  合計防御 ${st.def}<br>
+  武器重さ ${st.weaponWeight}<br>
+  防具重さ ${st.armorWeight}<br>
+  総重さ ${st.totalWeight}<br>
+  命中目安 ${st.hitBase}%`;
+}
+document.getElementById("charName").addEventListener("input",renderTotal);
+
+function saveCharacter(){
+  const st=calcCharacterStats();
+  if(!st){alert("本体が必要です。");return}
+  const used=[character.body,character.weapon,character.armor].filter(Boolean).map(x=>x.barcode);
+  if(new Set(used).size!==used.length){
+    alert("同じバーコードは本体・武器・防具に重複して使えません。");
+    return;
+  }
+  const name=document.getElementById("charName").value.trim()||"未命名キャラ";
+  const c={
+    id:Date.now(),
+    name,
+    body:character.body?character.body.barcode:null,
+    weapon:character.weapon?character.weapon.barcode:null,
+    armor:character.armor?character.armor.barcode:null,
+    stats:st,
+    createdAt:new Date().toISOString()
+  };
+  const cs=getChars();
+  cs.push(c);
+  setChars(cs);
+  alert("キャラ設定を保存しました。");
+}
+function openCharacters(){
+  renderCharacters();
+  showOnly("screenCharacters");
+}
+function renderCharacters(){
+  const list=document.getElementById("charList");
+  const cs=getChars();
+  const db=getDB();
+  list.innerHTML="";
+  if(!cs.length){list.innerHTML='<div class="card small">保存キャラはまだありません。</div>';return}
+  cs.forEach((c,i)=>{
+    const body=db.find(x=>x.barcode===c.body && x.type==='body');
+    const weapon=db.find(x=>x.barcode===c.weapon && x.type==='weapon');
+    const armor=db.find(x=>x.barcode===c.armor && x.type==='armor');
+    const div=document.createElement("div");
+    div.className="card";
+    div.innerHTML=`<div class="big">${escapeHtml(c.name)}</div>
+      <span class="badge">本体 ${body?escapeHtml(body.name):"なし"}</span>
+      <span class="badge">武器 ${weapon?escapeHtml(weapon.name):"なし"}</span>
+      <span class="badge">防具 ${armor?escapeHtml(armor.name):"なし"}</span><br>
+      HP ${c.stats.hp} / 速度 ${c.stats.spd}<br>
+      攻撃 ${c.stats.atk} / 防御 ${c.stats.def}<br>
+      総重さ ${c.stats.totalWeight} / 命中目安 ${c.stats.hitBase}%
+      <button class="sub" onclick="loadCharacter(${i})">この設定を読み込む</button>
+      <button class="danger" onclick="deleteCharacter(${i})">削除</button>`;
+    list.appendChild(div);
+  });
+}
+function loadCharacter(i){
+  const c=getChars()[i];if(!c)return;
+  const db=getDB();
+  character.body=db.find(x=>x.barcode===c.body && x.type==='body')||null;
+  character.weapon=db.find(x=>x.barcode===c.weapon && x.type==='weapon')||null;
+  character.armor=db.find(x=>x.barcode===c.armor && x.type==='armor')||null;
+  document.getElementById("charName").value=c.name;
+  openCharacterSetup();
+}
+function deleteCharacter(i){
+  const cs=getChars();if(!cs[i])return;
+  if(!confirm("このキャラ設定を削除しますか？"))return;
+  cs.splice(i,1);setChars(cs);renderCharacters();
+}
+
+
+/* Dojo battle */
+let dojoP=null,dojoE=null,dojoAttacker=null,dojoDefender=null,dojoTurnCount=0,dojoGameOver=false;
+
+function openDojo(){
+  renderDojoCharSelect();
+  dojoP=null;
+  dojoE=null;
+  dojoAttacker=null;
+  dojoDefender=null;
+  dojoTurnCount=0;
+  dojoGameOver=false;
+  document.getElementById("dojoLog").textContent="";
+  document.getElementById("dojoPlayer").innerHTML="プレイヤー未設定";
+  document.getElementById("dojoEnemy").innerHTML="敵未生成";
+  document.getElementById("dojoTurn").innerHTML="未開始";
+  showOnly("screenDojo");
+}
+
+function renderDojoCharSelect(){
+  const sel=document.getElementById("dojoCharSelect");
+  const cs=getChars();
+  sel.innerHTML='<option value="">保存キャラを選択</option>';
+  cs.forEach((c,i)=>{
+    const op=document.createElement("option");
+    op.value=i;
+    op.textContent=c.name;
+    sel.appendChild(op);
+  });
+}
+
+function dojoLoadSelected(){
+  const v=document.getElementById("dojoCharSelect").value;
+  if(v==="")return;
+  const c=getChars()[Number(v)];
+  if(!c)return;
+  dojoP=fighterFromSavedChar(c,"自分");
+  dojoStartWithPlayer();
+}
+
+function dojoUseCurrent(){
+  const st=calcCharacterStats();
+  if(!st){
+    alert("本体をセットしたキャラ設定が必要です。");
+    openCharacterSetup();
+    return;
+  }
+  const name=document.getElementById("charName").value.trim()||"自分";
+  dojoP=fighterFromStats(name,st);
+  dojoStartWithPlayer();
+}
+
+function fighterFromSavedChar(c,fallback){
+  return fighterFromStats(c.name||fallback,c.stats);
+}
+
+function fighterFromStats(name,st){
+  const weaponWeight=st.weaponWeight||100;
+  const armorWeight=st.armorWeight||50;
+  return {
+    name,
+    maxHp:st.hp,
+    hp:st.hp,
+    atk:st.atk,
+    def:st.def,
+    spd:st.spd,
+    weaponWeight,
+    armorWeight,
+    tempoMax:Math.max(1,armorWeight-Math.floor(st.spd/50)),
+    tempo:Math.max(1,armorWeight-Math.floor(st.spd/50)),
+    hit:Math.max(20,Math.min(100,Math.floor(10000/Math.max(100,weaponWeight))+Math.floor(st.spd/100))),
+    spirit:0,
+    stumble:false
+  };
+}
+
+function dojoRandomEnemy(){
+  const seed=Date.now().toString()+Math.random();
+  const hp=rnd(hash(seed+"hp"),500,1000);
+  const spd=1500-hp;
+  const rare=90+(hash(seed+"r")%21);
+  const baseAtk=rnd(hash(seed+"atk"),0,rare);
+  const baseDef=rare-baseAtk;
+  const weaponAtk=rnd(hash(seed+"w"),100,300);
+  const armorDef=rnd(hash(seed+"a"),50,100);
+  const st={
+    hp,spd,
+    atk:baseAtk+weaponAtk,
+    def:baseDef+armorDef,
+    weaponWeight:weaponAtk,
+    armorWeight:armorDef,
+    totalWeight:weaponAtk+armorDef,
+    hitBase:Math.max(20,Math.min(100,Math.floor(10000/weaponAtk)+Math.floor(spd/100)))
+  };
+  return fighterFromStats("道場モンスター",st);
+}
+
+function dojoStartWithPlayer(){
+  dojoE=dojoRandomEnemy();
+  dojoTurnCount=0;
+  dojoGameOver=false;
+  document.getElementById("dojoLog").textContent="";
+  dojoLog("道場バトル開始！");
+  dojoLog(`${dojoP.name} vs ${dojoE.name}`);
+  dojoDecide();
+  dojoRender();
+  showOnly("screenDojo");
+}
+
+function dojoNewEnemy(){
+  if(!dojoP){
+    dojoUseCurrent();
+    return;
+  }
+  dojoE=dojoRandomEnemy();
+  dojoTurnCount=0;
+  dojoGameOver=false;
+  document.getElementById("dojoLog").textContent="";
+  dojoLog("新しい敵が出現！");
+  dojoDecide();
+  dojoRender();
+}
+
+function dojoResetTempoIfSame(){
+  if(dojoP.tempo===dojoE.tempo){
+    dojoP.tempo=dojoP.tempoMax;
+    dojoE.tempo=dojoE.tempoMax;
+    dojoLog("テンポ同値。最大値にリセット。");
+  }
+}
+
+function dojoDecide(){
+  if(dojoGameOver)return;
+  dojoResetTempoIfSame();
+
+  if(dojoP.tempo>dojoE.tempo){
+    dojoAttacker=dojoE;dojoDefender=dojoP;
+    dojoP.tempo-=dojoE.tempo;
+    dojoLog(`攻撃権：${dojoE.name} / ${dojoP.name}テンポ残り ${dojoP.tempo}`);
+  }else if(dojoE.tempo>dojoP.tempo){
+    dojoAttacker=dojoP;dojoDefender=dojoE;
+    dojoE.tempo-=dojoP.tempo;
+    dojoLog(`攻撃権：${dojoP.name} / ${dojoE.name}テンポ残り ${dojoE.tempo}`);
+  }else{
+    dojoResetTempoIfSame();
+    dojoAttacker=dojoP;dojoDefender=dojoE;
+    dojoLog("完全同テンポ。自分が攻撃権。");
+  }
+}
+
+function dojoAction(defAction){
+  if(!dojoP||!dojoE){dojoUseCurrent();return}
+  if(dojoGameOver)return;
+
+  if(dojoAttacker.stumble){
+    dojoLog(`😵 ${dojoAttacker.name} はよろめいて動けない！`);
+    dojoAttacker.stumble=false;
+    dojoEndTurn();
+    return;
+  }
+
+  dojoAttack(dojoAttacker,dojoDefender,defAction);
+  dojoEndTurn();
+}
+
+function dojoAutoTurn(){
+  if(!dojoP||!dojoE){dojoUseCurrent();return}
+  if(dojoGameOver)return;
+  let action="guard";
+  if(dojoAttacker.spirit>=5)action="guard";
+  else if(dojoDefender.spirit>-2 && Math.random()<0.25)action="dodge";
+  dojoAction(action);
+}
+
+function dojoAutoMany(){
+  for(let i=0;i<10;i++){
+    if(dojoGameOver)break;
+    dojoAutoTurn();
+  }
+}
+
+function dojoAttack(atk,def,defAction){
+  let isSpecial=false;
+  let power=atk.atk;
+
+  if(atk.spirit>=5){
+    isSpecial=true;
+    power=atk.atk*5;
+    atk.spirit=0;
+    dojoLog(`🔥 ${atk.name} の必殺技！`);
+  }else{
+    dojoLog(`⚔️ ${atk.name} の攻撃！`);
+  }
+
+  atk.spirit=Math.min(5,atk.spirit+1);
+
+  const hitRoll=Math.random()*100;
+  if(!isSpecial && hitRoll>atk.hit){
+    dojoLog(`空振り！ 命中率${atk.hit}%`);
+    return;
+  }
+
+  if(defAction==="dodge" && !isSpecial){
+    def.spirit-=1;
+    dojoLog(`💨 ${def.name} は避けた！ ダメージ0 / 気合い-1`);
+    dojoCheckStumble(def);
+    return;
+  }
+
+  let raw=Math.max(1,power-Math.floor(def.def*0.6));
+  let dmg=raw;
+
+  if(defAction==="guard"){
+    dmg=Math.ceil(raw/2);
+    def.spirit=Math.min(5,def.spirit+1);
+    dojoLog(`🛡️ ${def.name} は守った！ ダメージ半減 / 気合い+1`);
+  }else if(defAction==="dodge" && isSpecial){
+    dojoLog("💥 必殺技は避けられない！");
+  }
+
+  def.hp=Math.max(0,def.hp-dmg);
+  dojoLog(`${def.name} に ${dmg} ダメージ！`);
+
+  dojoCheckStumble(def);
+  if(def.hp<=0){
+    dojoGameOver=true;
+    dojoLog(`🏆 ${atk.name} の勝利！`);
+  }
+}
+
+function dojoCheckStumble(p){
+  if(p.spirit<=-3){
+    p.stumble=true;
+    p.spirit=0;
+    dojoLog(`😵 ${p.name} はよろめいた！ 次の攻撃権で動けない`);
+  }
+}
+
+function dojoEndTurn(){
+  if(dojoGameOver){dojoRender();return}
+  dojoTurnCount++;
+  dojoDecide();
+  dojoRender();
+}
+
+function dojoRender(){
+  document.getElementById("dojoPlayer").innerHTML=dojoFighterHtml(dojoP);
+  document.getElementById("dojoEnemy").innerHTML=dojoFighterHtml(dojoE);
+  document.getElementById("dojoTurn").innerHTML=
+    `<div class="big">攻撃権：${dojoAttacker?escapeHtml(dojoAttacker.name):"-"}</div>
+    後手：${dojoDefender?escapeHtml(dojoDefender.name):"-"}<br>
+    <span class="badge">ターン ${dojoTurnCount+1}</span>
+    <span class="badge">後手は守る or 避ける</span>`;
+}
+
+function dojoFighterHtml(p){
+  if(!p)return "未設定";
+  const barN=Math.round((p.hp/p.maxHp)*10);
+  return `<div class="big">${escapeHtml(p.name)}</div>
+  HP ${p.hp}/${p.maxHp}<br>
+  ${"■".repeat(Math.max(0,barN))}${"□".repeat(Math.max(0,10-barN))}<br>
+  攻撃 ${p.atk} / 防御 ${p.def} / 速度 ${p.spd}<br>
+  武器重さ ${p.weaponWeight} / 防具重さ ${p.armorWeight}<br>
+  <span class="badge">テンポ ${p.tempo}/${p.tempoMax}</span>
+  <span class="badge">命中 ${p.hit}%</span>
+  <span class="badge">気合い ${p.spirit}</span>
+  ${p.stumble?'<span class="badge">よろめき</span>':''}`;
+}
+
+function dojoLog(t){
+  const el=document.getElementById("dojoLog");
+  el.textContent=t+"\\n"+el.textContent;
+}
+
+/* Camera */
+function applyTransform(){
+  videoLayer.style.transform=`translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px)) rotate(${rotation}deg) scale(${scale})`;
+  document.getElementById("scaleBadge").textContent="拡大: "+scale.toFixed(2);
+  document.getElementById("rotBadge").textContent="回転: "+Math.round(rotation)+"°";
+}
+async function startCamera(){
+  try{
+    if(stream)stopCamera();
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});
+    video.srcObject=stream;await video.play();
+    zxingReader=new ZXing.BrowserMultiFormatReader();
+    resetView();
+    statusEl.textContent="カメラ起動。バーコードを緑枠に合わせてください。";
+  }catch(e){statusEl.textContent="カメラ起動失敗: "+e.message+"\nHTTPS上で開いてください。"}
+}
+function stopCamera(){stopAutoScan();if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}video.srcObject=null;statusEl.textContent="カメラ停止"}
+function startAutoScan(){if(!stream){statusEl.textContent="先にカメラ開始を押してください。";return}if(scanning)return;scanning=true;scanCounts={};document.getElementById("countBadge").textContent="確認: 0/3";statusEl.textContent="自動読み取り中...";scanLoop()}
+function stopAutoScan(){scanning=false;if(scanTimer){clearTimeout(scanTimer);scanTimer=null}}
+async function scanLoop(){if(!scanning)return;await scanOnce(true);scanTimer=setTimeout(scanLoop,420)}
+async function scanOnce(silent=false){
+  if(!stream||video.readyState<2){if(!silent)statusEl.textContent="カメラ映像がまだ準備できていません。";return}
+  try{
+    const canvas=renderGuideCanvas();
+    const img=await canvasToImage(canvas);
+    if(!zxingReader)zxingReader=new ZXing.BrowserMultiFormatReader();
+    const res=await zxingReader.decodeFromImageElement(img);
+    acceptScan(res.getText());
+  }catch(e){if(!silent)statusEl.textContent="読み取れませんでした。バーコードを大きく水平に合わせてください。"}
+}
+function renderGuideCanvas(){
+  const wrapW=cameraWrap.clientWidth,wrapH=cameraWrap.clientHeight,dpr=Math.min(3,window.devicePixelRatio||1);
+  const guide=document.getElementById("guide"),wrapRect=cameraWrap.getBoundingClientRect(),guideRect=guide.getBoundingClientRect();
+  const outX=guideRect.left-wrapRect.left,outY=guideRect.top-wrapRect.top,outW=guideRect.width,outH=guideRect.height;
+  const canvas=document.createElement("canvas");
+  canvas.width=Math.max(1,Math.floor(outW*dpr));canvas.height=Math.max(1,Math.floor(outH*dpr));
+  const ctx=canvas.getContext("2d");
+  ctx.imageSmoothingEnabled=true;ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.scale(dpr,dpr);ctx.translate(-outX,-outY);
+  ctx.translate(wrapW/2+posX,wrapH/2+posY);ctx.rotate(rotation*Math.PI/180);ctx.scale(scale,scale);
+  ctx.drawImage(video,-video.clientWidth/2,-video.clientHeight/2,video.clientWidth,video.clientHeight);
+  return canvas;
+}
+function canvasToImage(canvas){return new Promise(resolve=>{const img=document.createElement("img");img.onload=()=>resolve(img);img.src=canvas.toDataURL("image/png")})}
+function acceptScan(raw){
+  const code=normalizeBarcode(raw);if(!code)return;
+  if(!isSupportedLength(code)){statusEl.textContent="候補: "+code+"\n桁数が対象外";return}
+  const jan=jan13Check(code);if(jan===false){statusEl.textContent="候補: "+code+"\nJAN13チェックNG";return}
+  scanCounts[code]=(scanCounts[code]||0)+1;
+  const n=scanCounts[code];
+  document.getElementById("countBadge").textContent="確認: "+Math.min(n,ACCEPT_COUNT)+"/"+ACCEPT_COUNT;
+  statusEl.textContent="候補: "+code+"\n確認 "+n+"/"+ACCEPT_COUNT;
+  if(n>=ACCEPT_COUNT){
+    lastConfirmed=code;
+    document.getElementById("barcodeInput").value=code;
+    document.getElementById("readResult").textContent=code;
+    scanCounts={};
+    document.getElementById("countBadge").textContent="確認: 3/3";
+    statusEl.textContent="読み取り確定: "+code;
+    showOK();
+    updateRegisteredStatus(code);
+    const existing=findItem(code,currentMode);
+    if(existing){
+      document.getElementById("nameInput").value=existing.name||code;
+    }else if(!document.getElementById("nameInput").value.trim()){
+      document.getElementById("nameInput").value=code;
+    }
+    previewGenerate();
+  }
+}
+function showOK(){okFlash.style.display="flex";setTimeout(()=>{okFlash.style.display="none"},900);if(navigator.vibrate)navigator.vibrate([80,40,80])}
+function resetView(){posX=0;posY=0;scale=1;rotation=0;activePointers.clear();applyTransform()}
+function zoomIn(){scale=Math.min(10,scale*1.18);applyTransform()}
+function zoomOut(){scale=Math.max(0.25,scale/1.18);applyTransform()}
+function rotateLeft(){rotation-=90;applyTransform()}
+function rotateRight(){rotation+=90;applyTransform()}
+function rotateFine(){rotation+=5;applyTransform()}
+function getDistance(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}
+function getAngle(a,b){return Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX)}
+function getCenter(a,b){return {x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2}}
+cameraWrap.addEventListener("pointerdown",(e)=>{
+  activePointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY});cameraWrap.setPointerCapture(e.pointerId);
+  if(activePointers.size===1){lastSingleX=e.clientX;lastSingleY=e.clientY}
+  if(activePointers.size===2){
+    const pts=[...activePointers.values()];
+    pinchStartDist=getDistance(pts[0],pts[1]);pinchStartAngle=getAngle(pts[0],pts[1]);
+    pinchStartScale=scale;pinchStartRotation=rotation;pinchStartCenter=getCenter(pts[0],pts[1]);pinchStartPos={x:posX,y:posY};
+  }
+});
+cameraWrap.addEventListener("pointermove",(e)=>{
+  if(!activePointers.has(e.pointerId))return;
+  activePointers.set(e.pointerId,{clientX:e.clientX,clientY:e.clientY});
+  if(activePointers.size===1){
+    const p=[...activePointers.values()][0],dx=p.clientX-lastSingleX,dy=p.clientY-lastSingleY;
+    lastSingleX=p.clientX;lastSingleY=p.clientY;posX+=dx;posY+=dy;applyTransform();return;
+  }
+  if(activePointers.size>=2){
+    const pts=[...activePointers.values()],dist=getDistance(pts[0],pts[1]),angle=getAngle(pts[0],pts[1]),center=getCenter(pts[0],pts[1]);
+    if(pinchStartDist>0){
+      scale=Math.max(0.25,Math.min(10,pinchStartScale*(dist/pinchStartDist)));
+      rotation=pinchStartRotation+(angle-pinchStartAngle)*180/Math.PI;
+      posX=pinchStartPos.x+(center.x-pinchStartCenter.x);posY=pinchStartPos.y+(center.y-pinchStartCenter.y);
+      applyTransform();
+    }
+  }
+});
+function endPointer(e){
+  if(activePointers.has(e.pointerId))activePointers.delete(e.pointerId);
+  try{cameraWrap.releasePointerCapture(e.pointerId)}catch(_){}
+  if(activePointers.size===1){const p=[...activePointers.values()][0];lastSingleX=p.clientX;lastSingleY=p.clientY}
+  if(activePointers.size<2)pinchStartDist=0;
+}
+cameraWrap.addEventListener("pointerup",endPointer);
+cameraWrap.addEventListener("pointercancel",endPointer);
+cameraWrap.addEventListener("pointerleave",endPointer);
+
+document.getElementById("barcodeInput").addEventListener("input",()=>{
+  const code=normalizeBarcode(document.getElementById("barcodeInput").value);
+  document.getElementById("readResult").textContent=code||"未読み取り";
+  updateRegisteredStatus(code);
+});
+applyTransform();
+</script>
+</body>
+</html>
