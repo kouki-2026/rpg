@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>KOUKI Barcode Battler v0.8.9 Weight Initiative</title>
+<title>KOUKI Barcode Battler Body Edition v1.0</title>
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 <style>
 :root{
@@ -637,18 +637,19 @@ button{background:var(--gold);color:#111;font-weight:bold}
 
 
 #dojoTurn{display:none!important;}
+
+/* Body Edition v1.0 */
+#weaponSlot,#armorSlot,#weaponSlot + .row,#armorSlot + .row{display:none!important}
 </style>
 </head>
 <body>
 <div id="app">
-<h1>バーコードバトラー v0.8.9</h1>
+<h1>バーコードバトラー Body v1.0</h1>
 
 <div id="screenMenu">
   <div class="box">
     <h2>メニュー</h2>
     <button onclick="openRegister('body')">本体を登録</button>
-    <button onclick="openRegister('weapon')">武器を登録</button>
-    <button onclick="openRegister('armor')">防具を登録</button>
     <button class="sub" onclick="openCharacterSetup()">キャラ設定</button>
     <button class="sub" onclick="openDojo()">道場：練習バトル</button>
     <button class="sub" onclick="openBattleHistory()">戦闘履歴</button>
@@ -657,8 +658,8 @@ button{background:var(--gold);color:#111;font-weight:bold}
   <div class="box">
     <h3>仕様</h3>
     <div class="small">
-      バーコードを1回登録すると、本体・武器・防具の3種類を図鑑に作ります。<br>
-      キャラ設定では、同じバーコードを本体・武器・防具に重複セットできません。
+      バーコード1本から、HP・攻撃・防御を生成します。<br>
+      重量は 攻撃＋防御 です。軽いほど先制・回避で有利です。
     </div>
   </div>
 </div>
@@ -722,18 +723,6 @@ button{background:var(--gold);color:#111;font-weight:bold}
       <button class="sub" onclick="scanForSlot('body')">読み取りで本体</button>
     </div>
 
-    <div id="weaponSlot" class="card slotEmpty">武器：未設定</div>
-    <div class="row">
-      <button onclick="openPickForSlot('weapon')">図鑑から武器</button>
-      <button class="sub" onclick="scanForSlot('weapon')">読み取りで武器</button>
-    </div>
-
-    <div id="armorSlot" class="card slotEmpty">防具：未設定</div>
-    <div class="row">
-      <button onclick="openPickForSlot('armor')">図鑑から防具</button>
-      <button class="sub" onclick="scanForSlot('armor')">読み取りで防具</button>
-    </div>
-
     <h3>合計能力</h3>
     <div id="charTotal" class="card">未完成</div>
     <button onclick="saveCharacter()">キャラ設定を保存</button>
@@ -765,12 +754,12 @@ button{background:var(--gold);color:#111;font-weight:bold}
   <div class="box">
     <h2>道場：練習バトル</h2>
     <div class="small">
-      保存キャラまたは現在のキャラ設定で、図鑑ランダム編成の敵とバトル練習できます。<br>
+      保存キャラまたは現在のキャラ設定で、図鑑の本体からランダム敵とバトル練習できます。<br>
       攻撃・守る・避けるは毎ターン選べます。気合いは行動の組み合わせで増減します。
     </div>
     <select id="dojoCharSelect" onchange="dojoLoadSelected()"></select>
     <select id="dojoEnemyMode">
-      <option value="dex">敵：図鑑ランダム編成</option>
+      <option value="dex">敵：図鑑ランダム</option>
       <option value="mirror">敵：ミラー戦</option>
       <option value="random">敵：完全ランダム</option>
     </select>
@@ -842,10 +831,9 @@ button{background:var(--gold);color:#111;font-weight:bold}
       <option value="all">全部</option>
       <option value="favorite">お気に入り</option>
       <option value="body">本体</option>
-      <option value="weapon">武器</option>
-      <option value="armor">防具</option>
     </select>
     <input id="dexSearch" placeholder="名前・バーコード検索" oninput="renderDex()">
+    <button class="danger" onclick="cleanupBodyOnlyDB()">旧武器・旧防具データを整理</button>
     <div id="dexList"></div>
     <button class="danger" onclick="backMenu()">戻る</button>
   </div>
@@ -888,7 +876,7 @@ migrateStorage();
 let currentMode="body";
 let currentItem=null;
 let pickSlot="body";
-let character={body:null,weapon:null,armor:null};
+let character={body:null};
 
 let stream=null,scanning=false,scanTimer=null,zxingReader=null;
 let posX=0,posY=0,scale=1,rotation=0;
@@ -917,10 +905,17 @@ function showOnly(id){
   document.getElementById(id).classList.remove("hidden");
 }
 function backMenu(){stopAutoScan();showOnly("screenMenu")}
-function typeName(t){return t==="body"?"本体":t==="weapon"?"武器":t==="armor"?"防具":t}
+function typeName(t){return "本体"}
 
-function getDB(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||"[]")}catch(_){return []}}
-function setDB(db){localStorage.setItem(SAVE_KEY,JSON.stringify(db))}
+function getDB(){
+  try{
+    const db=JSON.parse(localStorage.getItem(SAVE_KEY)||"[]");
+    return db.filter(x=>x && x.type==="body");
+  }catch(_){return []}
+}
+function setDB(db){
+  localStorage.setItem(SAVE_KEY,JSON.stringify((db||[]).filter(x=>x && x.type==="body")));
+}
 function getChars(){try{return JSON.parse(localStorage.getItem(CHAR_KEY)||"[]")}catch(_){return []}}
 function setChars(cs){localStorage.setItem(CHAR_KEY,JSON.stringify(cs))}
 
@@ -936,21 +931,11 @@ function jan13Check(code){
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
 function generateItem(code,mode,name){
-  const h=hash(code+"|"+mode);
-  const rare=90+(h%21);
-  const item={type:mode,barcode:code,name:name||code,rare,favorite:false,createdAt:new Date().toISOString()};
-  if(mode==="body"){
-    item.hp=rnd(hash(code+"hp"),500,1000);
-    const total=rare;
-    item.baseAtk=rnd(hash(code+"atk"),0,total);
-    item.baseDef=total-item.baseAtk;
-  }else if(mode==="weapon"){
-    item.atk=rnd(hash(code+"weapon"),100,300);
-    item.weight=item.atk;
-  }else{
-    item.def=rnd(hash(code+"armor"),50,100);
-    item.weight=item.def;
-  }
+  const item={type:"body",barcode:code,name:name||code,favorite:false,createdAt:new Date().toISOString()};
+  item.hp=rnd(hash(code+"hp"),500,1000);
+  item.baseAtk=rnd(hash(code+"atk"),100,300);
+  item.baseDef=rnd(hash(code+"def"),50,100);
+  item.totalWeight=item.baseAtk+item.baseDef;
   return item;
 }
 
@@ -978,7 +963,7 @@ function updateRegisteredStatus(code){
 
   const items=getRegisteredByBarcode(code);
   if(!items.length){
-    el.innerHTML="NEW：このバーコードは未登録です。保存すると本体・武器・防具をまとめて登録します。";
+    el.innerHTML="NEW：このバーコードは未登録です。保存すると本体として登録します。";
     return;
   }
 
@@ -989,37 +974,26 @@ function updateRegisteredStatus(code){
 
 function registerAllTypes(code,name){
   let db=getDB();
-  const types=["body","weapon","armor"];
-  const created=[];
-  const alreadyExists=db.some(x=>x.barcode===code);
-
-  for(const t of types){
-    const idx=db.findIndex(x=>x.barcode===code && x.type===t);
-    if(idx>=0){
-      // 登録済みの場合は名前を上書きしない
-      created.push(db[idx]);
-    }else{
-      const item=generateItem(code,t,name||code);
-      if(alreadyExists){
-        const existing=db.find(x=>x.barcode===code && x.name);
-        if(existing)item.name=existing.name;
-      }
-      db.push(item);
-      created.push(item);
-    }
+  const idx=db.findIndex(x=>x.barcode===code && x.type==="body");
+  let item;
+  if(idx>=0){
+    item=db[idx];
+  }else{
+    item=generateItem(code,"body",name||code);
+    db.push(item);
+    setDB(db);
   }
-  setDB(db);
-  return created;
+  return [item];
 }
 
 function findOrCreateFromCode(code,mode,name){
   registerAllTypes(code,name||code);
-  return findItem(code,mode);
+  return findItem(code,"body");
 }
 
 function openRegister(mode){
-  currentMode=mode;currentItem=null;
-  document.getElementById("regTitle").textContent={body:"本体登録",weapon:"武器登録",armor:"防具登録"}[mode];
+  currentMode='body';currentItem=null;
+  document.getElementById("regTitle").textContent="本体登録";
   document.getElementById("barcodeInput").value="";
   document.getElementById("nameInput").value="";
   document.getElementById("readResult").textContent="未読み取り";
@@ -1036,7 +1010,7 @@ function previewGenerate(){
 
   updateRegisteredStatus(code);
 
-  const existing=findItem(code,currentMode);
+  const existing=findItem(code,'body');
   if(existing){
     currentItem=existing;
     document.getElementById("nameInput").value=existing.name||code;
@@ -1047,7 +1021,7 @@ function previewGenerate(){
   }
 
   const name=document.getElementById("nameInput").value.trim()||code;
-  currentItem=generateItem(code,currentMode,name);
+  currentItem=generateItem(code,'body',name);
   document.getElementById("previewBox").innerHTML=itemHtml(currentItem,true);
 }
 function saveCurrent(){
@@ -1057,7 +1031,7 @@ function saveCurrent(){
 
   const wasRegistered=getRegisteredByBarcode(code).length>0;
   const created=registerAllTypes(code,name);
-  currentItem=created.find(x=>x.type===currentMode)||created[0];
+  currentItem=created[0];
 
   updateRegisteredStatus(code);
 
@@ -1065,47 +1039,42 @@ function saveCurrent(){
     `<div class="big">${wasRegistered?"図鑑に登録済みです":"3種類まとめて保存しました"}</div>`+
     created.map(x=>`<div class="card dexItem ${x.type}">${itemHtml(x,true)}</div>`).join("");
 
-  alert(wasRegistered ? "登録済みデータを表示しました。名前は上書きしていません。" : "本体・武器・防具をまとめて保存しました。");
+  alert(wasRegistered ? "登録済みデータを表示しました。名前は上書きしていません。" : "本体を保存しました。");
 }
-function slotDuplicateCheck(code,slot){
-  for(const s of ["body","weapon","armor"]){
-    if(s!==slot && character[s] && character[s].barcode===code){
-      alert("このバーコードは既にキャラ設定の「"+typeName(s)+"」で使っています。");
-      return false;
-    }
-  }
-  return true;
-}
+function slotDuplicateCheck(code,slot){return true}
 
 function setScannedToCharacter(){
   const code=normalizeBarcode(document.getElementById("barcodeInput").value);
   if(!code){alert("バーコードがありません。");return}
-  if(!slotDuplicateCheck(code,currentMode))return;
-
   const name=document.getElementById("nameInput").value.trim()||code;
-  const item=findOrCreateFromCode(code,currentMode,name);
+  const item=findOrCreateFromCode(code,"body",name);
   if(!item)return;
-  character[currentMode]=item;
+  character.body=item;
   openCharacterSetup();
 }
 
 function itemHtml(item,showType){
   let html=`<div class="big">${item.favorite?"⭐ ":""}${escapeHtml(item.name)}</div>`;
-  if(showType)html+=`<span class="badge">${typeName(item.type)}</span>`;
+  if(showType)html+=`<span class="badge">本体</span>`;
   html+=`<span class="badge">${item.barcode}</span><br>`;
-  if(item.type==="body")html+=`HP ${item.hp}<br>基本攻撃 ${item.baseAtk}<br>基本防御 ${item.baseDef}`;
-  else if(item.type==="weapon")html+=`攻撃力 ${item.atk}<br>重さ ${item.weight}<br><span class="small">重さは命中率に影響</span>`;
-  else html+=`守備力 ${item.def}<br>重さ ${item.weight}<br><span class="small">重さは攻撃回数に影響</span>`;
+  html+=`HP ${item.hp}<br>攻撃 ${item.baseAtk}<br>防御 ${item.baseDef}<br>重量 ${item.baseAtk+item.baseDef}`;
   return html;
 }
 
+function cleanupBodyOnlyDB(){
+  const raw=JSON.parse(localStorage.getItem(SAVE_KEY)||"[]");
+  const bodyOnly=raw.filter(x=>x && x.type==="body");
+  localStorage.setItem(SAVE_KEY,JSON.stringify(bodyOnly));
+  renderDex();
+  alert("本体データだけに整理しました。");
+}
 function openDex(){renderDex();showOnly("screenDex")}
 function renderDex(){
   const filter=document.getElementById("dexFilter").value;
   const q=document.getElementById("dexSearch").value.trim().toLowerCase();
   const list=document.getElementById("dexList");
   let db=getDB();
-  if(filter==="favorite")db=db.filter(x=>x.favorite);else if(filter!=="all")db=db.filter(x=>x.type===filter);
+  if(filter==="favorite")db=db.filter(x=>x.favorite);
   if(q)db=db.filter(x=>String(x.name).toLowerCase().includes(q)||String(x.barcode).includes(q));
   list.innerHTML="";
   if(!db.length){list.innerHTML='<div class="card small">まだ登録がありません。</div>';return}
@@ -1133,12 +1102,12 @@ function openCharacterSetup(){
   showOnly("screenCharacter");
 }
 function scanForSlot(slot){
-  currentMode=slot;
-  openRegister(slot);
+  currentMode="body";
+  openRegister("body");
 }
 function openPickForSlot(slot){
-  pickSlot=slot;
-  document.getElementById("pickTitle").textContent="図鑑から"+typeName(slot)+"を選択";
+  pickSlot="body";
+  document.getElementById("pickTitle").textContent="図鑑から本体を選択";
   document.getElementById("pickSearch").value="";
   renderPickList();
   showOnly("screenPick");
@@ -1146,7 +1115,7 @@ function openPickForSlot(slot){
 function renderPickList(){
   const q=document.getElementById("pickSearch").value.trim().toLowerCase();
   const list=document.getElementById("pickList");
-  let db=getDB().filter(x=>x.type===pickSlot);
+  let db=getDB().filter(x=>x.type==="body");
   if(q)db=db.filter(x=>String(x.name).toLowerCase().includes(q)||String(x.barcode).includes(q));
   list.innerHTML="";
   if(!db.length){list.innerHTML='<div class="card small">この種類の登録がありません。</div>';return}
@@ -1158,16 +1127,13 @@ function renderPickList(){
   });
 }
 function selectForSlot(barcode){
-  if(!slotDuplicateCheck(barcode,pickSlot))return;
-  const item=getDB().find(x=>x.barcode===barcode && x.type===pickSlot);
+  const item=getDB().find(x=>x.barcode===barcode && x.type==="body");
   if(!item)return;
-  character[pickSlot]=item;
+  character.body=item;
   openCharacterSetup();
 }
 function renderCharacter(){
   renderSlot("bodySlot","body");
-  renderSlot("weaponSlot","weapon");
-  renderSlot("armorSlot","armor");
   renderTotal();
 }
 function renderSlot(id,slot){
@@ -1187,18 +1153,18 @@ function clearSlot(slot){
 }
 function calcCharacterStats(){
   if(!character.body)return null;
-  const b=character.body,w=character.weapon,a=character.armor;
-  const atk=b.baseAtk+(w?w.atk:0);
-  const def=b.baseDef+(a?a.def:0);
-  const weaponWeight=w?w.weight:0;
-  const armorWeight=a?a.weight:0;
-  const totalWeight=weaponWeight+armorWeight;
+  const b=character.body;
+  const atk=b.baseAtk||0;
+  const def=b.baseDef||0;
+  const totalWeight=atk+def;
   const lightness=Math.max(0,500-totalWeight);
-  const hitBase=weaponWeight>0?Math.max(20,Math.min(100,Math.floor(10000/weaponWeight))):100;
+  const hitBase=Math.max(20,Math.min(100,Math.floor(10000/Math.max(100,atk))));
   return {
     hp:b.hp,
     atk,def,
-    weaponWeight,armorWeight,totalWeight,lightness,
+    weaponWeight:atk,
+    armorWeight:def,
+    totalWeight,lightness,
     hitBase
   };
 }
@@ -1211,30 +1177,24 @@ function renderTotal(){
   }
   box.innerHTML=`<div class="big">${escapeHtml(document.getElementById("charName").value||"未命名キャラ")}</div>
   HP ${st.hp}<br>
-  合計攻撃 ${st.atk}<br>
-  合計防御 ${st.def}<br>
-    総重さ ${st.totalWeight}<br>
-  軽さ ${st.lightness}<br>
+  攻撃 ${st.atk}<br>
+  防御 ${st.def}<br>
+  重量 ${st.totalWeight}<br>
   命中目安 ${st.hitBase}%<br>
-  <span class="small">軽さ = 500 - 武器重さ - 防具重さ。軽いほど避けやすい。</span>`;
+  <span class="small">重量 = 攻撃 + 防御。軽いほど先制・回避で有利。</span>`;
 }
 document.getElementById("charName").addEventListener("input",renderTotal);
 
 function saveCharacter(){
   const st=calcCharacterStats();
   if(!st){alert("本体が必要です。");return}
-  const used=[character.body,character.weapon,character.armor].filter(Boolean).map(x=>x.barcode);
-  if(new Set(used).size!==used.length){
-    alert("同じバーコードは本体・武器・防具に重複して使えません。");
-    return;
-  }
-  const name=document.getElementById("charName").value.trim()||"未命名キャラ";
+const name=document.getElementById("charName").value.trim()||"未命名キャラ";
   const c={
     id:Date.now(),
     name,
     body:character.body?character.body.barcode:null,
-    weapon:character.weapon?character.weapon.barcode:null,
-    armor:character.armor?character.armor.barcode:null,
+    weapon:null,
+    armor:null,
     stats:st,
     createdAt:new Date().toISOString()
   };
@@ -1255,17 +1215,13 @@ function renderCharacters(){
   if(!cs.length){list.innerHTML='<div class="card small">保存キャラはまだありません。</div>';return}
   cs.forEach((c,i)=>{
     const body=db.find(x=>x.barcode===c.body && x.type==='body');
-    const weapon=db.find(x=>x.barcode===c.weapon && x.type==='weapon');
-    const armor=db.find(x=>x.barcode===c.armor && x.type==='armor');
     const div=document.createElement("div");
     div.className="card";
     div.innerHTML=`<div class="big">${escapeHtml(c.name)}</div>
-      <span class="badge">本体 ${body?escapeHtml(body.name):"なし"}</span>
-      <span class="badge">武器 ${weapon?escapeHtml(weapon.name):"なし"}</span>
-      <span class="badge">防具 ${armor?escapeHtml(armor.name):"なし"}</span><br>
-      HP ${c.stats.hp} / 速度 ${c.stats.spd}<br>
+      <span class="badge">本体 ${body?escapeHtml(body.name):"なし"}</span><br>
+      HP ${c.stats.hp}<br>
       攻撃 ${c.stats.atk} / 防御 ${c.stats.def}<br>
-      総重さ ${c.stats.totalWeight} / 命中目安 ${c.stats.hitBase}%
+      重量 ${c.stats.totalWeight} / 命中目安 ${c.stats.hitBase}%
       <button class="sub" onclick="loadCharacter(${i})">この設定を読み込む</button>
       <button class="danger" onclick="deleteCharacter(${i})">削除</button>`;
     list.appendChild(div);
@@ -1275,8 +1231,6 @@ function loadCharacter(i){
   const c=getChars()[i];if(!c)return;
   const db=getDB();
   character.body=db.find(x=>x.barcode===c.body && x.type==='body')||null;
-  character.weapon=db.find(x=>x.barcode===c.weapon && x.type==='weapon')||null;
-  character.armor=db.find(x=>x.barcode===c.armor && x.type==='armor')||null;
   document.getElementById("charName").value=c.name;
   openCharacterSetup();
 }
@@ -1593,9 +1547,7 @@ function dojoUseCurrent(){
   dojoP=fighterFromStats(name,st);
 
   dojoP.dexParts={
-    body:character.body ? (character.body.name||character.body.barcode) : "なし",
-    weapon:character.weapon ? (character.weapon.name||character.weapon.barcode) : "なし",
-    armor:character.armor ? (character.armor.name||character.armor.barcode) : "なし"
+    body:character.body ? (character.body.name||character.body.barcode) : "なし"
   };
 
   dojoStartWithPlayer();
@@ -1607,13 +1559,8 @@ function fighterFromSavedChar(c,fallback){
   try{
     const db=getDB();
     const body=db.find(x=>x.barcode===c.body && x.type==="body");
-    const weapon=db.find(x=>x.barcode===c.weapon && x.type==="weapon");
-    const armor=db.find(x=>x.barcode===c.armor && x.type==="armor");
-
     f.dexParts={
-      body:body ? (body.name||body.barcode) : (c.body||"なし"),
-      weapon:weapon ? (weapon.name||weapon.barcode) : (c.weapon||"なし"),
-      armor:armor ? (armor.name||armor.barcode) : (c.armor||"なし")
+      body:body ? (body.name||body.barcode) : (c.body||"なし")
     };
   }catch(_){}
 
@@ -1664,34 +1611,30 @@ function dojoRandomFromDex(type){
   return items[Math.floor(Math.random()*items.length)];
 }
 
-function dojoStatsFromItems(body,weapon,armor){
+function dojoStatsFromItems(body){
   if(!body)return null;
+  const atk=body.baseAtk||0;
+  const def=body.baseDef||0;
   return {
     hp:body.hp,
-    atk:(body.baseAtk||0)+(weapon?weapon.atk:0),
-    def:(body.baseDef||0)+(armor?armor.def:0),
-    weaponWeight:weapon?weapon.weight:0,
-    armorWeight:armor?armor.weight:0,
-    totalWeight:(weapon?weapon.weight:0)+(armor?armor.weight:0),
-    hitBase:weapon?Math.max(20,Math.min(100,Math.floor(10000/Math.max(100,weapon.weight)))):100
+    atk,
+    def,
+    weaponWeight:atk,
+    armorWeight:def,
+    totalWeight:atk+def,
+    hitBase:Math.max(20,Math.min(100,Math.floor(10000/Math.max(100,atk))))
   };
 }
 
 function dojoRandomDexEnemy(){
   const body=dojoRandomFromDex("body");
-  const weapon=dojoRandomFromDex("weapon");
-  const armor=dojoRandomFromDex("armor");
-
-  if(!body || !weapon || !armor){
+  if(!body){
     return null;
   }
-
-  const st=dojoStatsFromItems(body,weapon,armor);
+  const st=dojoStatsFromItems(body);
   const f=fighterFromStats("図鑑ランダム敵",st);
   f.dexParts={
-    body:body.name||body.barcode,
-    weapon:weapon.name||weapon.barcode,
-    armor:armor.name||armor.barcode
+    body:body.name||body.barcode
   };
   return f;
 }
@@ -1722,19 +1665,16 @@ function dojoCloneFighter(src,name){
 function dojoPureRandomEnemy(){
   const seed=Date.now().toString()+Math.random();
   const hp=rnd(hash(seed+"hp"),500,1000);
-  const rare=90+(hash(seed+"r")%21);
-  const baseAtk=rnd(hash(seed+"atk"),0,rare);
-  const baseDef=rare-baseAtk;
-  const weaponAtk=rnd(hash(seed+"w"),100,300);
-  const armorDef=rnd(hash(seed+"a"),50,100);
+  const atk=rnd(hash(seed+"atk"),100,300);
+  const def=rnd(hash(seed+"def"),50,100);
   const st={
     hp,
-    atk:baseAtk+weaponAtk,
-    def:baseDef+armorDef,
-    weaponWeight:weaponAtk,
-    armorWeight:armorDef,
-    totalWeight:weaponAtk+armorDef,
-    hitBase:Math.max(20,Math.min(100,Math.floor(10000/weaponAtk)))
+    atk,
+    def,
+    weaponWeight:atk,
+    armorWeight:def,
+    totalWeight:atk+def,
+    hitBase:Math.max(20,Math.min(100,Math.floor(10000/Math.max(100,atk))))
   };
   const f=fighterFromStats("完全ランダム敵",st);
   f.dexParts=null;
@@ -1775,7 +1715,7 @@ function dojoStartWithPlayer(){
   if(dojoE.mirror){
     dojoLog("敵はミラー戦：自分と同じ能力です。");
   }else if(dojoE.dexParts){
-    dojoLog(`敵は図鑑からランダム編成：本体 ${dojoE.dexParts.body} / 武器 ${dojoE.dexParts.weapon} / 防具 ${dojoE.dexParts.armor}`);
+    dojoLog(`敵は図鑑からランダム選出：本体 ${dojoE.dexParts.body}`);
   }else{
     dojoLog("敵は完全ランダム生成です。");
   }
@@ -1803,7 +1743,7 @@ function dojoNewEnemy(){
   if(dojoE.mirror){
     dojoLog("敵はミラー戦：自分と同じ能力です。");
   }else if(dojoE.dexParts){
-    dojoLog(`敵は図鑑からランダム編成：本体 ${dojoE.dexParts.body} / 武器 ${dojoE.dexParts.weapon} / 防具 ${dojoE.dexParts.armor}`);
+    dojoLog(`敵は図鑑からランダム選出：本体 ${dojoE.dexParts.body}`);
   }else{
     dojoLog("敵は完全ランダム生成です。");
   }
@@ -2177,7 +2117,7 @@ function renderBattleHistory(){
     const div=document.createElement("div");
     div.className="card";
     const dex=r.enemy.dexParts
-      ? `<br><span class="small">敵構成：本体 ${escapeHtml(r.enemy.dexParts.body)} / 武器 ${escapeHtml(r.enemy.dexParts.weapon)} / 防具 ${escapeHtml(r.enemy.dexParts.armor)}</span>`
+      ? `<br><span class="small">敵本体：${escapeHtml(r.enemy.dexParts.body)}</span>`
       : "";
     div.innerHTML=
       `<div class="big">${escapeHtml(r.winner)} 勝利</div>`+
@@ -2264,9 +2204,7 @@ function oneBattleText(r,index){
   if(r.enemy?.dexParts){
     txt+="敵構成\n";
     txt+="本体: "+r.enemy.dexParts.body+"\n";
-    txt+="武器: "+r.enemy.dexParts.weapon+"\n";
-    txt+="防具: "+r.enemy.dexParts.armor+"\n";
-  }
+      }
 
   txt+="\n--- ログ ---\n";
   txt+=(r.log||"")+"\n";
@@ -2330,7 +2268,7 @@ function exportBattleHistoryTXT(){
     txt+="自分: "+(r.player?.name||"")+" HP"+(r.player?.maxHp||"")+" 攻"+(r.player?.atk||"")+" 防"+(r.player?.def||"")+" 速"+(r.player?.spd||"")+"\\n";
     txt+="敵: "+(r.enemy?.name||"")+" HP"+(r.enemy?.maxHp||"")+" 攻"+(r.enemy?.atk||"")+" 防"+(r.enemy?.def||"")+" 速"+(r.enemy?.spd||"")+"\\n";
     if(r.enemy?.dexParts){
-      txt+="敵構成: 本体 "+r.enemy.dexParts.body+" / 武器 "+r.enemy.dexParts.weapon+" / 防具 "+r.enemy.dexParts.armor+"\\n";
+      txt+="敵構成: 本体 "+r.enemy.dexParts.body+"\\n";
     }
     txt+="--- ログ ---\\n";
     txt+=(r.log||"")+"\\n";
@@ -2446,7 +2384,7 @@ function acceptScan(raw){
     statusEl.textContent="読み取り確定: "+code;
     showOK();
     updateRegisteredStatus(code);
-    const existing=findItem(code,currentMode);
+    const existing=findItem(code,'body');
     if(existing){
       document.getElementById("nameInput").value=existing.name||code;
     }else if(!document.getElementById("nameInput").value.trim()){
